@@ -11,6 +11,7 @@ api_v1 = [
     path("", include("outlet.urls")),
     path("", include("accounts.backoffice_urls")),
     path("catalog/", include("catalog.urls")),
+    path("floor/", include("floor.urls")),
 ]
 
 urlpatterns = [

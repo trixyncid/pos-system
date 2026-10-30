@@ -70,6 +70,23 @@ Product: `{ id, kind, name, description, category, category_name, price, cost, u
 - Barcodes are unique.
 - Price and availability changes are written to the audit log with their before and after values.
 
+### Floor (`/floor/`)
+
+Every signed-in tablet may read; layout changes need `accounts.edit_floor`.
+
+| Method | Path | Notes |
+|---|---|---|
+| GET | `/floor/areas/?all=true` | Areas with their tables (inactive areas only with `all=true`), not paginated |
+| POST / PATCH / DELETE | `/floor/areas/`, `/floor/areas/{id}/` | `{ name, is_active }`. Deleting an area deletes its tables |
+| PUT | `/floor/areas/{id}/layout/` | `{ tables: [{ id?, label, shape, x, y, width, height, rotation, capacity }] }` replaces the area's tables: known ids are updated, new rows created, missing ones removed. Labels are unique across all areas; two tables can swap labels in one save |
+| POST | `/floor/tables/{id}/clean/` | `accounts.take_order`. Clears "needs cleaning" |
+
+Table: `{ id, label, shape: rect|round, x, y, width, height, rotation, capacity, status, seated_at, guests, order_total, waiter }`.
+
+- `x` and `y` are the table's centre on the area's 1000×700 canvas.
+- `status` is one of `available`, `occupied`, `ordered`, `billed` or `cleaning`. Until orders exist (M5), the API reports only `available` or `cleaning`, and the occupancy fields are null.
+- Every change publishes `{ type: "floor.changed" }` on the `floor` stream, so tablets can refetch.
+
 Escalation rules (both the API and the mock enforce them): nobody can grant a permission or give a role that does more than they can themselves, edit or reset the PIN of someone who can do more than them, deactivate themselves, change their own roles, or remove their own access to staff and roles.
 
 ## Realtime
