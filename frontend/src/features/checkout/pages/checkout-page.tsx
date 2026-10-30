@@ -45,8 +45,14 @@ function amountDue(
     order.discount_value,
     order.subtotal
   )
+  const taxable = picked
+    .filter((line) => line.tax_category === "pbjt")
+    .reduce((sum, line) => sum + line.total, 0)
   return Math.min(
-    shareTotals(part, order.subtotal, discount, rules).total,
+    shareTotals(part, order.subtotal, discount, rules, {
+      service: order.channel !== "snackbar",
+      taxable,
+    }).total,
     order.remaining
   )
 }

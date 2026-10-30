@@ -2,6 +2,7 @@ import type { Messages } from "@/lib/i18n.ts"
 
 export const en: Messages = {
   common: {
+    close: "Close",
     appName: "POS",
     back: "Back",
     cancel: "Cancel",
@@ -585,6 +586,30 @@ export const en: Messages = {
     pieces: "pcs",
     coins: "Coins",
     noDrawer: "Cash in/out needs the open drawer permission.",
+  },
+  snackbar: {
+    ready: "Ready to scan",
+    search: "Search name, SKU or barcode",
+    camera: "Camera",
+    cameraBody: "Hold the barcode inside the box.",
+    cameraDenied:
+      "The camera couldn't open. Allow camera access in the browser.",
+    today: "Today",
+    todaySummary: "{{count}} sales · {{total}}",
+    noSales: "No sales yet today.",
+    tabs: "Product type",
+    tabRetail: "Snacks & goods",
+    tabMenu: "Menu, no choices",
+    noMatch: "No products match.",
+    unknown: "Barcode {{code}} isn't known.",
+    addProduct: "Add product",
+    soldOut: "{{name}} is sold out.",
+    basket: "Basket",
+    clear: "Clear",
+    remove: "Remove {{name}}",
+    empty: "Scan a barcode or tap a product to start.",
+    payTitle: "Pay · {{count}} products",
+    nextCustomer: "Next customer",
   },
   station: {
     title: "Print station",

@@ -150,7 +150,15 @@ export function CartPanel({
     ? billTotals(
         subtotal,
         discountAmount(order.discount_kind, order.discount_value, subtotal),
-        rules
+        rules,
+        {
+          // New lines are counted as PBJT until the API says otherwise.
+          taxable:
+            subtotal -
+            order.lines
+              .filter((l) => l.status !== "void" && l.tax_category !== "pbjt")
+              .reduce((sum, l) => sum + l.total, 0),
+        }
       )
     : order.bill
   const empty = drafts.length + order.lines.length === 0

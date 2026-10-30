@@ -127,6 +127,17 @@ Order fields: `discount_kind: none|percent|amount`, `discount_value`, `discount_
 | POST | `/orders/{id}/bill/` | `take_payment` | Prints the bill at the `cashier` station and marks the order `billed`. Refused while lines are held. |
 | POST | `/orders/{id}/payments/` | `take_payment` | `{ id, method: cash, tendered, amount?, line_ids? }`. Idempotent by `id`. `line_ids` pays those items plus their share of discount, service and tax; the last unpaid items settle the exact remainder. `amount` pays part of what is left (even split). Neither pays everything left. Needs an open shift (`no_open_shift`). Cash below the amount due is refused. Once fully paid the order is `paid`, the table needs cleaning, and a receipt prints at `cashier`. Audited. |
 
+### Snack bar sales (`/sales/`, needs `accounts.take_payment`)
+
+| Method | Path | Notes |
+|---|---|---|
+| GET | `/sales/` | Today's paid counter sales, newest first (30) |
+| POST | `/sales/` | `{ id, lines: [{ id, product, quantity }], method: cash, tendered }`. One transaction: opens a `snackbar` order, adds and sends the lines (menu items still get kitchen/bar tickets), takes the cash and prints the receipt. Idempotent by `id`. Fails as a whole on `no_open_shift`, a sold-out item or too little cash. Audited as `order.sale`. |
+
+The scanner looks products up on the tablet from the cached catalog (`GET /catalog/products/?kind=retail` and `kind=menu`); `?barcode=` is the exact server-side lookup.
+
+**Tax per line.** Each order line keeps a snapshot of its product's `tax_category`. PBJT is charged only on the `pbjt` part of the bill; retail goods (`ppn`, `none`) are priced tax-inclusive or untaxed. Counter sales (`channel: snackbar`) carry no service charge.
+
 ### Shifts (`/shifts/`)
 
 One drawer, so one open shift at a time. Reading needs any of `open_shift`, `close_shift`, `take_payment` or `open_drawer`.

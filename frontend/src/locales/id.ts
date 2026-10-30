@@ -1,6 +1,7 @@
 /** Bahasa Indonesia: the default. Every key here must also exist in en.ts (the type enforces it). */
 export const id = {
   common: {
+    close: "Tutup",
     appName: "POS",
     back: "Kembali",
     cancel: "Batal",
@@ -592,6 +593,29 @@ export const id = {
     pieces: "lbr",
     coins: "Koin",
     noDrawer: "Kas masuk/keluar butuh izin buka laci.",
+  },
+  snackbar: {
+    ready: "Siap scan",
+    search: "Cari nama, SKU atau barcode",
+    camera: "Kamera",
+    cameraBody: "Arahkan barcode ke dalam kotak.",
+    cameraDenied: "Kamera tidak bisa dibuka. Izinkan akses kamera di browser.",
+    today: "Hari ini",
+    todaySummary: "{{count}} transaksi · {{total}}",
+    noSales: "Belum ada penjualan hari ini.",
+    tabs: "Jenis produk",
+    tabRetail: "Snack & barang",
+    tabMenu: "Menu tanpa pilihan",
+    noMatch: "Tidak ada produk yang cocok.",
+    unknown: "Barcode {{code}} tidak dikenal.",
+    addProduct: "Tambah produk",
+    soldOut: "{{name}} habis.",
+    basket: "Keranjang",
+    clear: "Kosongkan",
+    remove: "Hapus {{name}}",
+    empty: "Scan barcode atau ketuk produk untuk mulai.",
+    payTitle: "Bayar · {{count}} produk",
+    nextCustomer: "Pembeli berikutnya",
   },
   station: {
     title: "Print station",

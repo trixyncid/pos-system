@@ -197,6 +197,7 @@ function buildLine(
     added_by_name: actor.full_name,
     sent_at: null,
     void_reason: "",
+    tax_category: product.tax_category,
     paid: false,
   }
 }
@@ -599,6 +600,86 @@ export const orderHandlers = [
       const table = findTable(order.table)
       if (table) table.status = "cleaning"
     }
+    cashierJob(billPayload(order, "receipt", actor.full_name, payment))
+    changed(order)
+    return ok(order, { status: 201 })
+  }),
+
+  // --- Snack bar counter -------------------------------------------------------
+  http.get(apiPath("/sales/"), async ({ request }) => {
+    const { error } = actorWith(request, perm.takePayment)
+    if (error) return error
+    await delay()
+    const today = new Date().toDateString()
+    return ok(
+      orders
+        .filter(
+          (o) =>
+            o.channel === "snackbar" &&
+            o.status === "paid" &&
+            new Date(o.payments.at(-1)?.created_at ?? 0).toDateString() ===
+              today
+        )
+        .reverse()
+        .slice(0, 30)
+    )
+  }),
+
+  http.post(apiPath("/sales/"), async ({ request }) => {
+    const { actor, error } = actorWith(request, perm.takePayment)
+    if (error) return error
+    await delay(350)
+    const body = (await request.json()) as {
+      id: string
+      tendered: number
+      lines: LineBody[]
+    }
+    const existing = orders.find((o) => o.id === body.id)
+    if (existing) return ok(existing, { status: 201 })
+    const shift = currentShift()
+    if (!shift)
+      return fail(400, "Open a shift first: cash goes into the drawer.", {
+        code: "no_open_shift",
+      })
+    // Built aside and only kept once the cash is enough, like the API's transaction.
+    const order = blankOrder({
+      id: body.id,
+      channel: "snackbar",
+      type: "takeaway",
+      table: null,
+      table_label: "",
+      guests: 1,
+      waiter: actor.full_name,
+      created_at: new Date().toISOString(),
+    })
+    for (const lineBody of body.lines) {
+      const line = buildLine(lineBody, order, actor)
+      if (typeof line === "string")
+        return fail(400, line, { errors: { lines: [line] } })
+      order.lines.push(line)
+    }
+    recompute(order)
+    const due = order.bill.total
+    if (body.tendered < due)
+      return fail(400, "Not enough cash.", {
+        errors: { tendered: ["Not enough cash."] },
+      })
+    orders.push(order)
+    send(order, order.lines, actor)
+    const payment = {
+      id: mockId(),
+      method: "cash",
+      amount: due,
+      tendered: body.tendered,
+      change: body.tendered - due,
+      received_by_name: actor.full_name,
+      created_at: new Date().toISOString(),
+    }
+    order.payments.push(payment)
+    order.status = "paid"
+    shiftPayments.push({ shift: shift.id, method: "cash", amount: due })
+    refreshTotals(shift)
+    recompute(order)
     cashierJob(billPayload(order, "receipt", actor.full_name, payment))
     changed(order)
     return ok(order, { status: 201 })

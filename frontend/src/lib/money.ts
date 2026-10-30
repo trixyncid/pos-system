@@ -40,28 +40,46 @@ export type BillRules = {
   rounding: number
 }
 
+/** `amount * part / whole`, rounded half-up: a proportional slice. */
+export function shareOf(amount: number, part: number, whole: number) {
+  return whole ? Math.round((amount * part) / whole) : 0
+}
+
+export type BillOptions = {
+  /** False for counter sales: no table service. */
+  service?: boolean
+  /** The part of the subtotal PBJT applies to (PBJT-category lines); default all of it. */
+  taxable?: number
+}
+
 /**
  * The bill, in the order every receipt shows it: subtotal, discount,
- * service charge, PBJT, rounding. The backend computes the same way.
+ * service charge, PBJT, rounding. The backend computes the same way
+ * (payments/billing.compute).
  */
 export function billTotals(
   subtotal: number,
   discount: number,
-  rules: BillRules
+  rules: BillRules,
+  { service = true, taxable }: BillOptions = {}
 ) {
   const afterDiscount = Math.max(0, subtotal - discount)
-  const service = percentOf(afterDiscount, rules.servicePercent)
-  const taxable =
+  const serviceCharge = service
+    ? percentOf(afterDiscount, rules.servicePercent)
+    : 0
+  let base =
     rules.taxBase === "subtotal_with_service"
-      ? afterDiscount + service
+      ? afterDiscount + serviceCharge
       : afterDiscount
-  const tax = percentOf(taxable, rules.pbjtPercent)
-  const beforeRounding = afterDiscount + service + tax
+  if (taxable !== undefined && taxable < subtotal)
+    base = shareOf(base, taxable, subtotal)
+  const tax = percentOf(base, rules.pbjtPercent)
+  const beforeRounding = afterDiscount + serviceCharge + tax
   const total = roundCash(beforeRounding, rules.rounding)
   return {
     subtotal,
     discount: subtotal - afterDiscount,
-    service,
+    service: serviceCharge,
     tax,
     rounding: total - beforeRounding,
     total,
@@ -89,10 +107,10 @@ export function shareTotals(
   part: number,
   subtotal: number,
   discount: number,
-  rules: BillRules
+  rules: BillRules,
+  options: BillOptions = {}
 ) {
-  const share = subtotal ? Math.round((discount * part) / subtotal) : 0
-  return billTotals(part, share, rules)
+  return billTotals(part, shareOf(discount, part, subtotal), rules, options)
 }
 
 /** One guest's part of an even split, rounded up to the cash unit so the last guest pays the least. */

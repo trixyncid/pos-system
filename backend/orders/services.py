@@ -166,6 +166,7 @@ def add_lines(*, user: User, order_id, lines: list[LineInput], send: bool) -> Or
                 note=line.note.strip(),
                 seat=line.seat,
                 station=product.category.station if product.category else "none",
+                tax_category=product.tax_category,
                 added_by=user,
             )
         )

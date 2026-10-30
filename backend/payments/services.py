@@ -5,6 +5,8 @@ payments reach the bill total; then it closes and its table needs cleaning.
 
 from __future__ import annotations
 
+import uuid
+
 from django.db import transaction
 from django.utils import timezone
 from rest_framework.exceptions import ValidationError
@@ -153,3 +155,33 @@ def pay(*, user, order_id, payment_id, method: str, tendered: int, amount: int |
     _queue(order, user, JobKind.RECEIPT, payment=payment)
     _changed(order)
     return order, payment
+
+
+@transaction.atomic
+def sell(*, user, sale_id, lines: list, tendered: int, method: str = Method.CASH):
+    """
+    A snack bar counter sale in one step: the order, its lines (anything
+    with a kitchen or bar station still gets a ticket), the payment and the
+    receipt. A retried request returns the sale it already made.
+    """
+    from orders.models import Channel, Order, OrderType
+    from orders.services import add_lines, open_order
+
+    existing = Order.objects.filter(pk=sale_id).first()
+    if existing is not None:
+        return existing
+    require_open_shift()  # Before anything is created, so a closed drawer leaves nothing behind.
+    order = open_order(
+        user=user, order_id=sale_id, table=None, guests=1, type=OrderType.TAKEAWAY, channel=Channel.SNACKBAR
+    )
+    add_lines(user=user, order_id=order.pk, lines=lines, send=True)
+    order, _ = pay(
+        user=user,
+        order_id=order.pk,
+        payment_id=uuid.uuid4(),
+        method=method,
+        tendered=tendered,
+        amount=None,
+        line_ids=None,
+    )
+    return order

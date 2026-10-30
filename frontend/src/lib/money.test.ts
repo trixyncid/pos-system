@@ -90,3 +90,23 @@ describe("checkout helpers", () => {
     expect(quickCash(100_000)).toEqual([100_000, 200_000])
   })
 })
+
+describe("counter sales and retail lines", () => {
+  const rules = {
+    servicePercent: 5,
+    pbjtPercent: 10,
+    taxBase: "subtotal_with_service" as const,
+    rounding: 100,
+  }
+
+  it("charges no service and PBJT only on restaurant items (backend test_sales)", () => {
+    expect(
+      billTotals(46_000, 0, rules, { service: false, taxable: 22_000 }).total
+    ).toBe(48_200)
+  })
+
+  it("charges retail items at a table service but not PBJT", () => {
+    const bill = billTotals(40_000, 0, rules, { taxable: 28_000 })
+    expect([bill.service, bill.tax, bill.total]).toEqual([2_000, 2_940, 44_900])
+  })
+})

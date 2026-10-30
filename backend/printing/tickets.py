@@ -10,6 +10,8 @@ from django.utils import timezone
 
 
 def order_label(order) -> str:
+    if order.channel == "snackbar":
+        return f"Snack bar #{order.number}"
     if order.table_label:
         return f"Meja {order.table_label}"
     return f"Bawa pulang #{order.number}"

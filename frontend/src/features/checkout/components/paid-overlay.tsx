@@ -17,10 +17,13 @@ export function PaidOverlay({
   change,
   remaining,
   onDone,
+  doneLabel,
 }: {
   change: number
   remaining: number
   onDone: () => void
+  /** The settled button; "Back to the floor" by default. */
+  doneLabel?: string
 }) {
   const { t } = useTranslation()
   const reduce = useReducedMotion()
@@ -109,7 +112,7 @@ export function PaidOverlay({
               />
             </div>
             <Button size="xl" variant="secondary" onClick={onDone}>
-              {t("checkout.backToFloor")}
+              {doneLabel ?? t("checkout.backToFloor")}
             </Button>
           </div>
         ) : (

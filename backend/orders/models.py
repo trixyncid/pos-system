@@ -128,6 +128,8 @@ class OrderLine(BaseModel):
     note = models.CharField(_("note"), max_length=200, blank=True, default="")
     seat = models.PositiveSmallIntegerField(_("seat"), null=True, blank=True)
     station = models.CharField(_("prints at"), max_length=16)
+    # Snapshot of the product's tax category: PBJT is charged only on PBJT lines.
+    tax_category = models.CharField(_("tax"), max_length=8, default="pbjt")
     status = models.CharField(_("status"), max_length=8, choices=LineStatus.choices, default=LineStatus.HELD)
     added_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+", verbose_name=_("added by")

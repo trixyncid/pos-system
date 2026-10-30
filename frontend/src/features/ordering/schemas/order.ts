@@ -17,6 +17,8 @@ export const lineSchema = z.object({
   added_by_name: z.string(),
   sent_at: z.string().nullable(),
   void_reason: z.string(),
+  /** PBJT is charged only on "pbjt" lines; retail goods are PPN-inclusive or untaxed. */
+  tax_category: z.enum(["pbjt", "ppn", "none"]),
   /** Settled by a split payment (pay by item); it can no longer be voided. */
   paid: z.boolean(),
 })

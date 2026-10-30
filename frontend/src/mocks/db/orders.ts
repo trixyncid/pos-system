@@ -10,7 +10,7 @@ import {
   modifierGroups,
   products,
 } from "@/mocks/db/catalog.ts"
-import { billTotals, percentOf, type BillRules } from "@/lib/money.ts"
+import { billTotals, percentOf, shareOf, type BillRules } from "@/lib/money.ts"
 import { areas } from "@/mocks/db/floor.ts"
 import { outlet } from "@/mocks/db/outlet.ts"
 import { staff } from "@/mocks/db/staff.ts"
@@ -51,22 +51,33 @@ export function discountOf(order: Order, subtotal: number) {
 }
 
 /** backend payments/billing.lines_bill: the order's discount is spread in proportion. */
+/** backend payments/billing._bill_for: no service at the counter, PBJT only on PBJT lines. */
+function billFor(order: Order, lines: OrderLine[], discount: number) {
+  const sum = (items: OrderLine[]) =>
+    items.reduce((total, line) => total + line.total, 0)
+  return billTotals(sum(lines), discount, billRules(), {
+    service: order.channel !== "snackbar",
+    taxable: sum(lines.filter((line) => line.tax_category === "pbjt")),
+  })
+}
+
 export function linesBill(order: Order, lines: OrderLine[]) {
   const part = lines.reduce((sum, line) => sum + line.total, 0)
-  const share = order.subtotal
-    ? Math.round((discountOf(order, order.subtotal) * part) / order.subtotal)
-    : 0
-  return billTotals(part, share, billRules())
+  return billFor(
+    order,
+    lines,
+    shareOf(discountOf(order, order.subtotal), part, order.subtotal)
+  )
 }
 
 export function recompute(order: Order) {
   order.subtotal = order.lines
     .filter((line) => line.status !== "void")
     .reduce((sum, line) => sum + line.total, 0)
-  order.bill = billTotals(
-    order.subtotal,
-    discountOf(order, order.subtotal),
-    billRules()
+  order.bill = billFor(
+    order,
+    order.lines.filter((line) => line.status !== "void"),
+    discountOf(order, order.subtotal)
   )
   order.paid = order.payments.reduce((sum, p) => sum + p.amount, 0)
   order.remaining = Math.max(0, order.bill.total - order.paid)
@@ -150,6 +161,7 @@ export function makeLine(
           ).toISOString()
         : null,
     void_reason: "",
+    tax_category: product.tax_category,
     paid: false,
   }
 }
@@ -279,9 +291,12 @@ export function ticketPayload(
     station,
     order_id: order.id,
     order_number: order.number,
-    label: order.table_label
-      ? `Meja ${order.table_label}`
-      : `Bawa pulang #${order.number}`,
+    label:
+      order.channel === "snackbar"
+        ? `Snack bar #${order.number}`
+        : order.table_label
+          ? `Meja ${order.table_label}`
+          : `Bawa pulang #${order.number}`,
     type: order.type,
     guests: order.guests,
     by,

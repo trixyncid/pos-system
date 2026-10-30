@@ -119,3 +119,26 @@ test("a cashier takes a discount with manager approval and is paid in cash", asy
     page.getByRole("button", { name: "Meja 2, Perlu dibersihkan" })
   ).toBeVisible()
 })
+
+test("the snack bar sells a scanned item for cash", async ({ page }) => {
+  await page.goto("/login")
+  await page.getByRole("button", { name: "Manager" }).click()
+  await page.getByRole("button", { name: "Masuk" }).click()
+  await page.getByRole("link", { name: "Snack bar" }).click()
+  await expect(page.getByText("Siap scan")).toBeVisible()
+
+  // A scanner gun types the code a few milliseconds per key, then Enter.
+  for (const key of [..."8991000000000", "Enter"])
+    await page.keyboard.press(key)
+  await expect(page.getByRole("button", { name: /^Bayar · Rp/ })).toBeEnabled()
+  for (const key of [..."0000000000000", "Enter"])
+    await page.keyboard.press(key)
+  await expect(
+    page.getByText("Barcode 0000000000000 tidak dikenal.")
+  ).toBeVisible()
+
+  await page.getByRole("button", { name: /^Bayar · Rp/ }).click()
+  await page.getByRole("button", { name: "Uang pas" }).click()
+  await page.getByRole("button", { name: /^Terima/ }).click()
+  await expect(page.getByText("Pembayaran diterima")).toBeVisible()
+})

@@ -30,6 +30,7 @@ class OrderLineSerializer(serializers.ModelSerializer):
             "added_by_name",
             "sent_at",
             "void_reason",
+            "tax_category",
             "paid",
         )
 
@@ -86,12 +87,11 @@ class OrderSerializer(serializers.ModelSerializer):
     def _bill(self, order):
         """Computed from the prefetched lines; the outlet is loaded once per response."""
         from outlet.models import Outlet
-        from payments.billing import compute, order_discount
+        from payments.billing import order_bill
 
         if "outlet" not in self.context:
             self.context["outlet"] = Outlet.load()
-        subtotal = self.get_subtotal(order)
-        return compute(subtotal, order_discount(order, subtotal), self.context["outlet"])
+        return order_bill(order, self.context["outlet"])
 
     def get_bill(self, order) -> dict:
         return self._bill(order).as_dict()

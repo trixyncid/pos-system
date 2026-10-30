@@ -39,17 +39,31 @@ class Bill:
         return asdict(self)
 
 
-def compute(subtotal: int, discount: int, outlet: Outlet) -> Bill:
+def share_of(amount: int, part: int, whole: int) -> int:
+    """`amount * part / whole`, rounded half-up: a proportional slice of a whole-rupiah amount."""
+    if not whole:
+        return 0
+    return int((Decimal(amount) * part / whole).quantize(Decimal(1), rounding=ROUND_HALF_UP))
+
+
+def compute(subtotal: int, discount: int, outlet: Outlet, *, service: bool = True, taxable: int | None = None) -> Bill:
+    """
+    `service=False` for counter sales (no table service). `taxable` is the
+    part of the subtotal PBJT applies to (lines whose product is PBJT;
+    retail goods under PPN or none are not charged it); default all of it.
+    """
     after_discount = max(0, subtotal - discount)
-    service = percent_of(after_discount, outlet.service_percent)
-    taxable = after_discount + service if outlet.tax_base == TaxBase.SUBTOTAL_WITH_SERVICE else after_discount
-    tax = percent_of(taxable, outlet.pbjt_percent)
-    before = after_discount + service + tax
+    service_charge = percent_of(after_discount, outlet.service_percent) if service else 0
+    base = after_discount + service_charge if outlet.tax_base == TaxBase.SUBTOTAL_WITH_SERVICE else after_discount
+    if taxable is not None and taxable < subtotal:
+        base = share_of(base, taxable, subtotal)
+    tax = percent_of(base, outlet.pbjt_percent)
+    before = after_discount + service_charge + tax
     total = round_cash(before, outlet.cash_rounding)
     return Bill(
         subtotal=subtotal,
         discount=subtotal - after_discount,
-        service=service,
+        service=service_charge,
         tax=tax,
         rounding=total - before,
         total=total,
@@ -66,16 +80,33 @@ def order_discount(order, subtotal: int) -> int:
     return 0
 
 
+def _live(order) -> list:
+    # .all() so a prefetch (the order serializer's) is used rather than a new query.
+    return [line for line in order.lines.all() if line.status != "void"]
+
+
+def _bill_for(order, lines, discount: int, outlet: Outlet) -> Bill:
+    from catalog.models import TaxCategory
+    from orders.models import Channel
+
+    return compute(
+        sum(line.total for line in lines),
+        discount,
+        outlet,
+        service=order.channel != Channel.SNACKBAR,
+        taxable=sum(line.total for line in lines if line.tax_category == TaxCategory.PBJT),
+    )
+
+
 def order_bill(order, outlet: Outlet | None = None) -> Bill:
-    subtotal = order.subtotal()
-    return compute(subtotal, order_discount(order, subtotal), outlet or Outlet.load())
+    lines = _live(order)
+    subtotal = sum(line.total for line in lines)
+    return _bill_for(order, lines, order_discount(order, subtotal), outlet or Outlet.load())
 
 
 def lines_bill(order, lines, outlet: Outlet | None = None) -> Bill:
     """The share of the bill for some lines: the order's discount is spread in proportion."""
-    outlet = outlet or Outlet.load()
-    whole = order.subtotal()
+    whole = sum(line.total for line in _live(order))
     part = sum(line.total for line in lines)
-    discount = order_discount(order, whole)
-    share = int((Decimal(discount) * part / whole).quantize(Decimal(1), rounding=ROUND_HALF_UP)) if whole else 0
-    return compute(part, share, outlet)
+    discount = share_of(order_discount(order, whole), part, whole)
+    return _bill_for(order, lines, discount, outlet or Outlet.load())
