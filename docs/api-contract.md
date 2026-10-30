@@ -127,6 +127,17 @@ Order fields: `discount_kind: none|percent|amount`, `discount_value`, `discount_
 | POST | `/orders/{id}/bill/` | `take_payment` | Prints the bill at the `cashier` station and marks the order `billed`. Refused while lines are held. |
 | POST | `/orders/{id}/payments/` | `take_payment` | `{ id, method: cash, tendered, amount?, line_ids? }`. Idempotent by `id`. `line_ids` pays those items plus their share of discount, service and tax; the last unpaid items settle the exact remainder. `amount` pays part of what is left (even split). Neither pays everything left. Needs an open shift (`no_open_shift`). Cash below the amount due is refused. Once fully paid the order is `paid`, the table needs cleaning, and a receipt prints at `cashier`. Audited. |
 
+### Order list, reprint and refund
+
+| Method | Path | Permission | Notes |
+|---|---|---|---|
+| GET | `/orders/history/?from=&to=&channel=&status=&search=` | `take_payment` or `view_reports` | Every order (restaurant and snack bar), newest first, paginated. Days are when the order was opened (default today). `status`: `open` (open or bill printed), `paid`, `void`, `refunded`. `search`: order number (`12` or `#12`), table, item or waiter. Rows: `{ id, number, channel, type, table_label, guests, status, waiter, total, paid, items, summary, promo_name, created_at, closed_at, refunded_at }`. |
+| GET | `/orders/{id}/` | `take_order` | The full order (lines with voids, bill, payments, refund) |
+| POST | `/orders/{id}/reprint/` | `reprint` | `{ kind: bill\|receipt }`. A copy at the cashier printer, marked as a reprint. A receipt needs a payment. |
+| POST | `/orders/{id}/refund/` | `take_payment` | `{ reason, approver?, approver_pin? }`. Paid orders only.<br>• Without `void_sent_item`, a manager approves by PIN.<br>• The cash leaves the open shift's drawer (`Refund`; the shift's `totals.refunds` and expected cash include it). Refused when the drawer holds less.<br>• Tracked items go back to stock (`refund` movement); recipe ingredients stay used.<br>• A refund slip prints, and the order becomes `refunded` and leaves the reports.<br>• Audited. |
+
+Orders also carry `refunded_at`, `refund_reason`, `refunded_by_name`, `refund_approved_by_name` and `closed_at`.
+
 ### Snack bar sales (`/sales/`, needs `accounts.take_payment`)
 
 | Method | Path | Notes |

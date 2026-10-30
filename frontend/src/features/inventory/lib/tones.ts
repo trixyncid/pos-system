@@ -16,4 +16,5 @@ export const kindTone: Record<MovementKind, StatusTone> = {
   receive: "success",
   waste: "danger",
   count: "accent",
+  refund: "info",
 }

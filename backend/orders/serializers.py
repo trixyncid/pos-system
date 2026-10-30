@@ -53,6 +53,8 @@ class OrderSerializer(serializers.ModelSerializer):
     paid = serializers.SerializerMethodField()
     remaining = serializers.SerializerMethodField()
     payments = PaymentSerializer(many=True, read_only=True)
+    refunded_by_name = serializers.CharField(source="refunded_by.full_name", default=None, read_only=True)
+    refund_approved_by_name = serializers.CharField(source="refund_approved_by.full_name", default=None, read_only=True)
 
     class Meta:
         model = Order
@@ -73,6 +75,11 @@ class OrderSerializer(serializers.ModelSerializer):
             "discount_reason",
             "promo",
             "promo_name",
+            "refunded_at",
+            "refund_reason",
+            "refunded_by_name",
+            "refund_approved_by_name",
+            "closed_at",
             "bill",
             "paid",
             "remaining",
@@ -176,3 +183,67 @@ class PaySerializer(serializers.Serializer):
     tendered = serializers.IntegerField(min_value=0, max_value=100_000_000)
     amount = serializers.IntegerField(min_value=1, required=False)
     line_ids = serializers.ListField(child=serializers.UUIDField(), required=False, allow_empty=False)
+
+
+class OrderSummarySerializer(serializers.ModelSerializer):
+    """One row of the order list: enough to find an order, not its lines."""
+
+    waiter = serializers.CharField(source="opened_by.full_name", read_only=True)
+    total = serializers.SerializerMethodField()
+    paid = serializers.SerializerMethodField()
+    items = serializers.SerializerMethodField()
+    summary = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Order
+        fields = (
+            "id",
+            "number",
+            "channel",
+            "type",
+            "table_label",
+            "guests",
+            "status",
+            "waiter",
+            "total",
+            "paid",
+            "items",
+            "summary",
+            "promo_name",
+            "created_at",
+            "closed_at",
+            "refunded_at",
+        )
+
+    def _live(self, order):
+        return [line for line in order.lines.all() if line.status != "void"]
+
+    def get_total(self, order) -> int:
+        from outlet.models import Outlet
+        from payments.billing import order_bill
+
+        if "outlet" not in self.context:
+            self.context["outlet"] = Outlet.load()
+        return order_bill(order, self.context["outlet"]).total
+
+    def get_paid(self, order) -> int:
+        return sum(payment.amount for payment in order.payments.all())
+
+    def get_items(self, order) -> int:
+        return sum(line.quantity for line in self._live(order))
+
+    def get_summary(self, order) -> str:
+        """The first few items, "2× Nasi goreng, 1× Es teh, …"."""
+        lines = self._live(order)
+        text = ", ".join(f"{line.quantity}× {line.name}" for line in lines[:3])
+        return text + (", …" if len(lines) > 3 else "")
+
+
+class RefundSerializer(serializers.Serializer):
+    reason = serializers.CharField(max_length=120)
+    approver = serializers.IntegerField(required=False)
+    approver_pin = serializers.RegexField(r"^\d{4,6}$", required=False)
+
+
+class ReprintSerializer(serializers.Serializer):
+    kind = serializers.ChoiceField(choices=["bill", "receipt"])

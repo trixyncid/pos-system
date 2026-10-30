@@ -152,3 +152,19 @@ if (egg)
     reason: "Pecah saat dibongkar",
     at: daysAgo(1, 10),
   })
+
+/** backend inventory.services.return_refund: tracked items go back on the shelf. */
+export function returnRefund(
+  order: { number: number; lines: OrderLine[]; refund_reason: string },
+  by: string
+) {
+  for (const line of order.lines) {
+    if (line.status === "void") continue
+    const product = products.find((p) => p.id === line.product)
+    if (product?.track_stock)
+      record(product, line.quantity, "refund", by, {
+        order_number: order.number,
+        reason: order.refund_reason,
+      })
+  }
+}

@@ -10,6 +10,9 @@ export const shiftPayments: {
 
 export const shifts: Shift[] = []
 
+/** Cash given back for refunded orders (backend payments.Refund). */
+export const shiftRefunds: { shift: string; amount: number }[] = []
+
 export function refreshTotals(shift: Shift) {
   const taken = shiftPayments.filter((p) => p.shift === shift.id)
   const sum = (items: { amount: number }[]) =>
@@ -17,12 +20,14 @@ export function refreshTotals(shift: Shift) {
   const cashSales = sum(taken.filter((p) => p.method === "cash"))
   const cashIn = sum(shift.movements.filter((m) => m.kind === "in"))
   const cashOut = sum(shift.movements.filter((m) => m.kind === "out"))
+  const refunds = sum(shiftRefunds.filter((r) => r.shift === shift.id))
   shift.totals = {
     cash_sales: cashSales,
     other_sales: sum(taken.filter((p) => p.method !== "cash")),
     cash_in: cashIn,
     cash_out: cashOut,
-    expected_cash: shift.opening_cash + cashSales + cashIn - cashOut,
+    refunds,
+    expected_cash: shift.opening_cash + cashSales + cashIn - cashOut - refunds,
     payments: taken.length,
   }
   return shift
@@ -57,6 +62,7 @@ function seedClosed(
       other_sales: 0,
       cash_in: 0,
       cash_out: 0,
+      refunds: 0,
       expected_cash: opening + sales,
       payments: Math.round(sales / 145_000),
     },
@@ -85,6 +91,7 @@ const today: Shift = {
     other_sales: 0,
     cash_in: 0,
     cash_out: 0,
+    refunds: 0,
     expected_cash: 0,
     payments: 0,
   },

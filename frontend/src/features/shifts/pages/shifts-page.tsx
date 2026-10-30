@@ -198,6 +198,9 @@ function CurrentShift({ shift }: { shift: Shift }) {
         <Stat label={t("shifts.cashSales")} amount={totals.cash_sales} />
         <Stat label={t("shifts.cashIn")} amount={totals.cash_in} sign="+" />
         <Stat label={t("shifts.cashOut")} amount={totals.cash_out} sign="−" />
+        {totals.refunds > 0 && (
+          <Stat label={t("shifts.refunds")} amount={totals.refunds} sign="−" />
+        )}
       </div>
 
       <section className="space-y-2">

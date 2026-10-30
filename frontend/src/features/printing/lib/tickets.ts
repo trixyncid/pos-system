@@ -172,7 +172,11 @@ export function billTicket(
   doc.push({ type: "rule" })
   doc.push({
     type: "text",
-    text: receipt ? "STRUK PEMBAYARAN" : "TAGIHAN",
+    text: payload.refund
+      ? "STRUK REFUND"
+      : receipt
+        ? "STRUK PEMBAYARAN"
+        : "TAGIHAN",
     align: "center",
     bold: true,
   })
@@ -242,7 +246,19 @@ export function billTicket(
     })
   }
 
-  const payment = payload.payment
+  if (payload.refund) {
+    doc.push({ type: "feed", lines: 1 })
+    doc.push({
+      type: "row",
+      left: "Dikembalikan",
+      right: `-${money(payload.refund.amount)}`,
+      bold: true,
+    })
+    for (const line of wrap(`Alasan: ${payload.refund.reason}`, columns))
+      doc.push({ type: "text", text: line })
+  }
+
+  const payment = payload.refund ? null : payload.payment
   if (receipt && payment && bill) {
     doc.push({ type: "feed", lines: 1 })
     if (payment.amount !== bill.total)
@@ -310,6 +326,15 @@ export function shiftTicket(
     { type: "row", left: "Penjualan tunai", right: money(shift.cash_sales) },
     { type: "row", left: "Kas masuk", right: money(shift.cash_in) },
     { type: "row", left: "Kas keluar", right: `-${money(shift.cash_out)}` },
+    ...(shift.refunds
+      ? [
+          {
+            type: "row" as const,
+            left: "Refund",
+            right: `-${money(shift.refunds)}`,
+          },
+        ]
+      : []),
     { type: "rule" },
     {
       type: "row",

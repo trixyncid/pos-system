@@ -113,6 +113,7 @@ export const shiftHandlers = [
         other_sales: 0,
         cash_in: 0,
         cash_out: 0,
+        refunds: 0,
         expected_cash: 0,
         payments: 0,
       },

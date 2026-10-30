@@ -28,6 +28,7 @@ export const movementKindSchema = z.enum([
   "receive",
   "waste",
   "count",
+  "refund",
 ])
 export type MovementKind = z.infer<typeof movementKindSchema>
 

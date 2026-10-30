@@ -15,7 +15,7 @@ from orders.models import DiscountKind, LineStatus, OrderStatus
 from orders.services import ApprovalRequired, _assert_open, _changed, _locked
 from outlet.models import Outlet
 from payments.billing import lines_bill, order_bill
-from payments.models import Method, Payment
+from payments.models import Method, Payment, Refund
 from printing.models import JobKind, PrintJob
 from printing.tickets import bill_payload
 from realtime.broadcast import publish
@@ -28,7 +28,7 @@ def paid_total(order) -> int:
     return sum(payment.amount for payment in order.payments.all())
 
 
-def _queue(order, user, kind: str, *, payment=None) -> PrintJob:
+def _queue(order, user, kind: str, *, payment=None, refund=None, reprint=False) -> PrintJob:
     outlet = Outlet.load()
     job = PrintJob.objects.create(
         station="cashier",
@@ -36,7 +36,15 @@ def _queue(order, user, kind: str, *, payment=None) -> PrintJob:
         order=order,
         created_by=user,
         payload=bill_payload(
-            order, order_bill(order, outlet), kind=kind, by=user, outlet=outlet, payment=payment, paid=paid_total(order)
+            order,
+            order_bill(order, outlet),
+            kind=kind,
+            by=user,
+            outlet=outlet,
+            payment=payment,
+            paid=paid_total(order),
+            refund=refund,
+            reprint=reprint,
         ),
     )
     publish("print", {"type": "print.job", "id": str(job.pk), "station": job.station})
@@ -189,3 +197,58 @@ def sell(*, user, sale_id, lines: list, tendered: int, method: str = Method.CASH
         line_ids=None,
     )
     return order
+
+
+VOID_SENT = "accounts.void_sent_item"
+
+
+@transaction.atomic
+def refund(*, user, order_id, reason: str, approver=None):
+    """
+    Take back a paid order: the cash leaves the open shift's drawer, tracked
+    retail items go back on the shelf, and a refund slip prints. Like voiding
+    a sent item, it needs accounts.void_sent_item or a manager's PIN.
+    """
+    from inventory import services as inventory
+
+    order = _locked(order_id)
+    if order.status != OrderStatus.PAID:
+        raise ValidationError({"detail": "Only a paid order can be refunded."})
+    reason = reason.strip()
+    if not reason:
+        raise ValidationError({"reason": ["Say why it is refunded."]})
+    authorised_by = user if user.has_perm(VOID_SENT) else approver
+    if authorised_by is None:
+        raise ApprovalRequired("A manager must approve this refund.")
+    shift = require_open_shift()
+    amount = paid_total(order)
+    if amount > shift.totals()["expected_cash"]:
+        raise ValidationError({"detail": "There isn't that much cash in the drawer for this refund."})
+    given_back = Refund.objects.create(
+        order=order, shift=shift, amount=amount, reason=reason, by=user, approved_by=authorised_by
+    )
+    order.status = OrderStatus.REFUNDED
+    order.refunded_at = timezone.now()
+    order.refund_reason = reason
+    order.refunded_by = user
+    order.refund_approved_by = authorised_by
+    order.save()
+    lines = [line for line in order.lines.select_related("product") if line.status != LineStatus.VOID]
+    inventory.return_refund(order=order, lines=lines, user=user)
+    _queue(order, user, JobKind.RECEIPT, refund=given_back)
+    _changed(order)
+    return order, given_back
+
+
+def reprint(*, user, order_id, kind: str) -> PrintJob:
+    """A copy of the bill or the receipt at the cashier printer, marked as a reprint."""
+    from orders.models import Order
+
+    order = Order.objects.prefetch_related("lines", "payments").get(pk=order_id)
+    if kind == JobKind.RECEIPT and not order.payments.exists():
+        raise ValidationError({"kind": ["This order has no payment to print a receipt for."]})
+    if not order.lines.exclude(status=LineStatus.VOID).exists():
+        raise ValidationError({"detail": "There is nothing on this order to print."})
+    payment = order.payments.order_by("-created_at").first() if kind == JobKind.RECEIPT else None
+    given_back = order.refunds.first() if kind == JobKind.RECEIPT else None
+    return _queue(order, user, kind, payment=payment, refund=given_back, reprint=True)

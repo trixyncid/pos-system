@@ -45,12 +45,14 @@ class Shift(BaseModel):
         other_sales = self.payments.exclude(method="cash").aggregate(total=Sum("amount"))["total"] or 0
         cash_in = self.movements.filter(kind=MovementKind.IN).aggregate(total=Sum("amount"))["total"] or 0
         cash_out = self.movements.filter(kind=MovementKind.OUT).aggregate(total=Sum("amount"))["total"] or 0
-        expected = self.opening_cash + cash_sales + cash_in - cash_out
+        refunds = self.refunds.filter(method="cash").aggregate(total=Sum("amount"))["total"] or 0
+        expected = self.opening_cash + cash_sales + cash_in - cash_out - refunds
         return {
             "cash_sales": cash_sales,
             "other_sales": other_sales,
             "cash_in": cash_in,
             "cash_out": cash_out,
+            "refunds": refunds,
             "expected_cash": expected,
             "payments": self.payments.count(),
         }

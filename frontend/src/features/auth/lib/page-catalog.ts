@@ -7,6 +7,7 @@ import {
   PackageIcon,
   PencilRulerIcon,
   PrinterIcon,
+  ReceiptTextIcon,
   TicketPercentIcon,
   ScanBarcodeIcon,
   ScrollTextIcon,
@@ -26,6 +27,7 @@ type NavKey =
   | "checkout"
   | "floor"
   | "snackbar"
+  | "orders"
   | "shifts"
   | "printStation"
   | "dashboard"
@@ -95,6 +97,15 @@ export const pages: readonly Page[] = [
     icon: ScanBarcodeIcon,
     anyOf: [perm.takePayment],
     milestone: "M7",
+  },
+  {
+    key: "orders",
+    path: "/orders",
+    shell: "pos",
+    section: "service",
+    icon: ReceiptTextIcon,
+    anyOf: [perm.takePayment, perm.viewReports],
+    milestone: "M9",
   },
   {
     key: "shifts",

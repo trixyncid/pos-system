@@ -17,6 +17,7 @@ class MovementKind(models.TextChoices):
     RECEIVE = "receive", _("Received")
     WASTE = "waste", _("Waste")
     COUNT = "count", _("Stock count")
+    REFUND = "refund", _("Refund returned")
 
 
 class StockMovement(BaseModel):

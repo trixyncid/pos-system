@@ -62,6 +62,18 @@ def return_void(*, order, line, user) -> None:
     _record(product, Decimal(line.quantity), MovementKind.VOID, user, order=order, reason=line.void_reason)
 
 
+@transaction.atomic
+def return_refund(*, order, lines, user) -> None:
+    """A refunded sale puts tracked items back; recipe ingredients stay used, as with a void."""
+    deltas: dict = defaultdict(Decimal)
+    for line in lines:
+        if line.product.track_stock:
+            deltas[line.product_id] += line.quantity
+    products = _locked(deltas)
+    for product_id, delta in deltas.items():
+        _record(products[product_id], delta, MovementKind.REFUND, user, order=order, reason=order.refund_reason)
+
+
 def _tracked(product_ids) -> dict:
     products = _locked(product_ids)
     missing = [str(pk) for pk in product_ids if pk not in products or not products[pk].track_stock]

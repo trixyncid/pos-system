@@ -53,7 +53,7 @@ export const orderSchema = z.object({
   table: z.uuid().nullable(),
   table_label: z.string(),
   guests: z.number(),
-  status: z.enum(["open", "billed", "paid", "merged", "void"]),
+  status: z.enum(["open", "billed", "paid", "merged", "void", "refunded"]),
   waiter: z.string(),
   note: z.string(),
   subtotal: z.number(),
@@ -63,6 +63,12 @@ export const orderSchema = z.object({
   /** One discount per bill: a promo (by name) or the manual discount above. */
   promo: z.uuid().nullable(),
   promo_name: z.string(),
+  /** A paid order taken back, with who did it and who approved it. */
+  refunded_at: z.string().nullable(),
+  refund_reason: z.string(),
+  refunded_by_name: z.string().nullable(),
+  refund_approved_by_name: z.string().nullable(),
+  closed_at: z.string().nullable(),
   /** Computed by the API in the same order as billTotals(): the tablet never sums money itself. */
   bill: billSchema,
   paid: z.number(),

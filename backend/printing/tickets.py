@@ -52,7 +52,9 @@ def _outlet_header(outlet) -> dict:
     }
 
 
-def bill_payload(order, bill, *, kind: str, by, outlet, payment=None, paid: int = 0) -> dict:
+def bill_payload(
+    order, bill, *, kind: str, by, outlet, payment=None, paid: int = 0, refund=None, reprint: bool = False
+) -> dict:
     """A bill (before paying) or a receipt (after): every line, the totals, and the payment."""
     lines = [line for line in order.lines.all() if line.status != "void"]
     return {
@@ -78,6 +80,9 @@ def bill_payload(order, bill, *, kind: str, by, outlet, payment=None, paid: int 
             "change": payment.change,
         },
         "paid": paid,
+        # A refund slip: the same receipt, headed REFUND, with what was given back.
+        "refund": None if refund is None else {"amount": refund.amount, "reason": refund.reason},
+        "reprint": reprint,
     }
 
 

@@ -28,6 +28,7 @@ const shiftSummarySchema = z.object({
   other_sales: z.number(),
   cash_in: z.number(),
   cash_out: z.number(),
+  refunds: z.number().optional(),
   expected_cash: z.number(),
   payments: z.number(),
   counted_cash: z.number().nullable(),
@@ -86,6 +87,10 @@ export const ticketPayloadSchema = z.object({
     .nullable()
     .optional(),
   paid: z.number().optional(),
+  refund: z
+    .object({ amount: z.number(), reason: z.string() })
+    .nullable()
+    .optional(),
   // Shift reports.
   shift: shiftSummarySchema.optional(),
 })

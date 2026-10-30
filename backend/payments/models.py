@@ -34,3 +34,23 @@ class Payment(BaseModel):
 
     def __str__(self):
         return f"{self.amount} ({self.method})"
+
+
+class Refund(BaseModel):
+    """Money given back for a paid order, out of the drawer of the shift that was open then."""
+
+    order = models.ForeignKey("orders.Order", on_delete=models.PROTECT, related_name="refunds")
+    shift = models.ForeignKey("shifts.Shift", on_delete=models.PROTECT, related_name="refunds")
+    method = models.CharField(_("method"), max_length=8, choices=Method.choices, default=Method.CASH)
+    amount = models.PositiveIntegerField(_("amount"))
+    reason = models.CharField(_("reason"), max_length=120)
+    by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+")
+    approved_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+")
+
+    class Meta:
+        verbose_name = _("refund")
+        verbose_name_plural = _("refunds")
+        ordering = ("created_at",)
+
+    def __str__(self):
+        return f"-{self.amount} ({self.method})"

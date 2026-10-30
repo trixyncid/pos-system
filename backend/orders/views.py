@@ -5,12 +5,13 @@ from drf_spectacular.utils import extend_schema
 from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
+from rest_framework.permissions import BasePermission
 
 from audit.services import emit
 from common.permissions import RequirePermission
 from common.responses import ok
 from orders import services
-from orders.models import SEATED, LineStatus, Order, OrderLine
+from orders.models import SEATED, LineStatus, Order, OrderLine, OrderStatus
 from orders.serializers import (
     AddLinesSerializer,
     DiscountSerializer,
@@ -19,7 +20,10 @@ from orders.serializers import (
     MoveSerializer,
     OpenOrderSerializer,
     OrderSerializer,
+    OrderSummarySerializer,
     PaySerializer,
+    RefundSerializer,
+    ReprintSerializer,
     SendSerializer,
     UpdateLineSerializer,
     VoidSerializer,
@@ -31,6 +35,17 @@ from promos.serializers import ApplyPromoSerializer, PromoSerializer
 
 TakeOrder = RequirePermission("accounts.take_order")
 TakePayment = RequirePermission("accounts.take_payment")
+Reprint = RequirePermission("accounts.reprint")
+
+
+class OrderHistoryReader(BasePermission):
+    """The order list is for whoever takes money or reads the reports."""
+
+    def has_permission(self, request, view):
+        user = request.user
+        return bool(user and user.is_authenticated) and (
+            user.has_perm("accounts.take_payment") or user.has_perm("accounts.view_reports")
+        )
 
 
 class OrderViewSet(viewsets.GenericViewSet):
@@ -43,12 +58,16 @@ class OrderViewSet(viewsets.GenericViewSet):
     pagination_class = None
 
     def get_permissions(self):
-        if self.action in {"bill", "payments", "promos", "promo"}:
+        if self.action in {"bill", "payments", "promos", "promo", "refund"}:
             return [TakePayment]
+        if self.action == "history":
+            return [OrderHistoryReader()]
+        if self.action == "reprint":
+            return [Reprint]
         return [TakeOrder]
 
     def get_queryset(self):
-        return Order.objects.select_related("table", "opened_by").prefetch_related(
+        return Order.objects.select_related("table", "opened_by", "refunded_by", "refund_approved_by").prefetch_related(
             Prefetch("lines", queryset=OrderLine.objects.select_related("added_by").order_by("created_at")),
             "payments__received_by",
             "promo__products",
@@ -272,3 +291,87 @@ class OrderViewSet(viewsets.GenericViewSet):
             metadata={"promo": promo.name if promo else None},
         )
         return self._reply(order)
+
+    @extend_schema(responses=OrderSummarySerializer(many=True))
+    @action(detail=False, methods=["get"])
+    def history(self, request):
+        """
+        Every order, newest first, paginated. Filters: `from`/`to` (local
+        days the order was opened, default today), `channel`, `status`
+        (open = open or bill printed; paid; void; refunded), `search`
+        (order number, table, item or waiter).
+        """
+        from datetime import date
+
+        from django.db.models import Q
+        from django.utils import timezone
+
+        from common.pagination import ApiPagination
+        from reports.services import day_bounds
+
+        params = request.query_params
+        try:
+            first = date.fromisoformat(params["from"]) if params.get("from") else timezone.localdate()
+            last = date.fromisoformat(params["to"]) if params.get("to") else first
+        except ValueError as exc:
+            raise ValidationError({"from": ["Use YYYY-MM-DD."]}) from exc
+        start, end = day_bounds(first, last)
+        orders = (
+            Order.objects.filter(created_at__gte=start, created_at__lt=end)
+            .exclude(status=OrderStatus.MERGED)
+            .select_related("opened_by", "promo")
+            .prefetch_related("lines__product", "payments", "promo__products", "promo__categories")
+            .order_by("-created_at")
+        )
+        if channel := params.get("channel"):
+            orders = orders.filter(channel=channel)
+        status = params.get("status")
+        if status == "open":
+            orders = orders.filter(status__in=SEATED)
+        elif status:
+            orders = orders.filter(status=status)
+        if search := params.get("search", "").strip():
+            query = (
+                Q(table_label__iexact=search)
+                | Q(lines__name__icontains=search)
+                | Q(opened_by__full_name__icontains=search)
+            )
+            if search.lstrip("#").isdigit():
+                query |= Q(number=int(search.lstrip("#")))
+            orders = orders.filter(query).distinct()
+        paginator = ApiPagination()
+        page = paginator.paginate_queryset(orders, request, view=self)
+        return paginator.get_paginated_response(OrderSummarySerializer(page, many=True).data)
+
+    @extend_schema(request=RefundSerializer, responses=OrderSerializer)
+    @action(detail=True, methods=["post"])
+    def refund(self, request, pk=None):
+        data = RefundSerializer(data=request.data)
+        data.is_valid(raise_exception=True)
+        order, given_back = checkout.refund(
+            user=request.user,
+            order_id=pk,
+            reason=data.validated_data["reason"],
+            approver=self._approver(data.validated_data),
+        )
+        emit(
+            request,
+            "order.refund",
+            target=order,
+            target_label=f"#{order.number}",
+            metadata={
+                "amount": given_back.amount,
+                "reason": given_back.reason,
+                "approved_by": given_back.approved_by.full_name,
+            },
+        )
+        return self._reply(order)
+
+    @extend_schema(request=ReprintSerializer, responses=None)
+    @action(detail=True, methods=["post"])
+    def reprint(self, request, pk=None):
+        data = ReprintSerializer(data=request.data)
+        data.is_valid(raise_exception=True)
+        job = checkout.reprint(user=request.user, order_id=pk, kind=data.validated_data["kind"])
+        emit(request, "print.reprint", target_label=f"#{job.payload.get('order_number')}", metadata={"kind": job.kind})
+        return ok(status=201)

@@ -29,6 +29,7 @@ class OrderStatus(models.TextChoices):
     PAID = "paid", _("Paid")
     MERGED = "merged", _("Merged into another order")
     VOID = "void", _("Cancelled")
+    REFUNDED = "refunded", _("Refunded")
 
 
 class DiscountKind(models.TextChoices):
@@ -79,6 +80,15 @@ class Order(BaseModel):
         settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True, related_name="+"
     )
     discount_approved_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True, related_name="+"
+    )
+    # A paid order taken back: the cash left the drawer (payments.Refund).
+    refunded_at = models.DateTimeField(_("refunded at"), null=True, blank=True)
+    refund_reason = models.CharField(_("refund reason"), max_length=120, blank=True, default="")
+    refunded_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True, related_name="+"
+    )
+    refund_approved_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True, related_name="+"
     )
     # One discount per bill: a promo or the manual discount above, never both.

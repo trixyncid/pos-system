@@ -60,6 +60,7 @@ function paid(
     },
   ]
   recompute(order)
+  order.closed_at = closed.toISOString()
   orders.push(order)
 }
 

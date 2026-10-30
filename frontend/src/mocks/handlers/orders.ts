@@ -21,11 +21,12 @@ import {
 } from "@/mocks/db/orders.ts"
 import { audit } from "@/mocks/db/audit.ts"
 import { promoDiscount, promos, unavailableReason } from "@/mocks/db/promos.ts"
-import { deductSale, returnVoid } from "@/mocks/db/inventory.ts"
+import { deductSale, returnRefund, returnVoid } from "@/mocks/db/inventory.ts"
 import {
   currentShift,
   refreshTotals,
   shiftPayments,
+  shiftRefunds,
 } from "@/mocks/db/shifts.ts"
 import { permissionsOf, staff, type MockStaff } from "@/mocks/db/staff.ts"
 import { bearerStaff } from "@/mocks/handlers/auth.ts"
@@ -213,7 +214,167 @@ function send(order: Order, lines: OrderLine[], actor: MockStaff) {
   queue(order, lines, "kitchen", actor)
 }
 
+const localDay = (iso: string) => {
+  const d = new Date(iso)
+  const pad = (n: number) => String(n).padStart(2, "0")
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+}
+
+/** backend orders.serializers.OrderSummarySerializer */
+function summaryRow(order: Order) {
+  const live = order.lines.filter((l) => l.status !== "void")
+  const summary = live
+    .slice(0, 3)
+    .map((l) => `${l.quantity}× ${l.name}`)
+    .join(", ")
+  return {
+    id: order.id,
+    number: order.number,
+    channel: order.channel,
+    type: order.type,
+    table_label: order.table_label,
+    guests: order.guests,
+    status: order.status,
+    waiter: order.waiter,
+    total: order.bill.total,
+    paid: order.paid,
+    items: live.reduce((sum, l) => sum + l.quantity, 0),
+    summary: summary + (live.length > 3 ? ", …" : ""),
+    promo_name: order.promo_name,
+    created_at: order.created_at,
+    closed_at: order.closed_at,
+    refunded_at: order.refunded_at,
+  }
+}
+
 export const orderHandlers = [
+  // Before /orders/:id/, so "history" is not read as an order id.
+  http.get(apiPath("/orders/history/"), async ({ request }) => {
+    const actor = bearerStaff(request)
+    if (!actor)
+      return fail(401, "Authentication credentials were not provided.", {
+        code: "not_authenticated",
+      })
+    const held = permissionsOf(actor)
+    if (!held.includes(perm.takePayment) && !held.includes(perm.viewReports))
+      return fail(403, "You do not have permission to perform this action.", {
+        code: "permission_denied",
+      })
+    await delay(250)
+    const url = new URL(request.url)
+    const from =
+      url.searchParams.get("from") ?? localDay(new Date().toISOString())
+    const to = url.searchParams.get("to") ?? from
+    const channel = url.searchParams.get("channel")
+    const status = url.searchParams.get("status")
+    const search = url.searchParams.get("search")?.trim().toLowerCase()
+    const number = search?.replace(/^#/, "")
+    const rows = orders
+      .filter((o) => {
+        if (o.status === "merged") return false
+        const day = localDay(o.created_at)
+        if (day < from || day > to) return false
+        if (channel && o.channel !== channel) return false
+        if (status === "open" && o.status !== "open" && o.status !== "billed")
+          return false
+        if (status && status !== "open" && o.status !== status) return false
+        if (search)
+          return (
+            (number && /^\d+$/.test(number) && o.number === Number(number)) ||
+            o.table_label.toLowerCase() === search ||
+            o.waiter.toLowerCase().includes(search) ||
+            o.lines.some((l) => l.name.toLowerCase().includes(search))
+          )
+        return true
+      })
+      .sort((a, b) => b.created_at.localeCompare(a.created_at))
+    const size = Number(url.searchParams.get("page_size") ?? 20)
+    const page = Number(url.searchParams.get("page") ?? 1)
+    return HttpResponse.json({
+      success: true,
+      count: rows.length,
+      next: page * size < rows.length ? `?page=${page + 1}` : null,
+      previous: page > 1 ? `?page=${page - 1}` : null,
+      results: rows.slice((page - 1) * size, page * size).map(summaryRow),
+    })
+  }),
+
+  http.post(apiPath("/orders/:id/refund/"), async ({ request, params }) => {
+    const { actor, error } = actorWith(request, perm.takePayment)
+    if (error) return error
+    await delay(350)
+    const order = orders.find((o) => o.id === params.id)
+    if (!order) return fail(404, "Not found.")
+    if (order.status !== "paid")
+      return fail(400, "Only a paid order can be refunded.")
+    const body = (await request.json()) as {
+      reason?: string
+      approver?: number
+      approver_pin?: string
+    }
+    const reason = (body.reason ?? "").trim()
+    if (!reason)
+      return fail(400, "Say why it is refunded.", {
+        errors: { reason: ["Say why it is refunded."] },
+      })
+    const approval = approve(actor, perm.voidSentItem, body, "refund")
+    if (approval.error) return approval.error
+    const shift = currentShift()
+    if (!shift)
+      return fail(400, "Open a shift first: cash goes into the drawer.", {
+        code: "no_open_shift",
+      })
+    refreshTotals(shift)
+    if (order.paid > shift.totals.expected_cash)
+      return fail(
+        400,
+        "There isn't that much cash in the drawer for this refund."
+      )
+    shiftRefunds.push({ shift: shift.id, amount: order.paid })
+    refreshTotals(shift)
+    Object.assign(order, {
+      status: "refunded",
+      refunded_at: new Date().toISOString(),
+      refund_reason: reason,
+      refunded_by_name: actor.full_name,
+      refund_approved_by_name: approval.by.full_name,
+    })
+    returnRefund(order, actor.full_name)
+    const slip = billPayload(order, "receipt", actor.full_name, null)
+    slip.refund = { amount: order.paid, reason }
+    cashierJob(slip)
+    audit("order.refund", actor, `#${order.number}`, {
+      amount: order.paid,
+      reason,
+      approved_by: approval.by.full_name,
+    })
+    return changed(order)
+  }),
+
+  http.post(apiPath("/orders/:id/reprint/"), async ({ request, params }) => {
+    const { actor, error } = actorWith(request, perm.reprint)
+    if (error) return error
+    await delay()
+    const order = orders.find((o) => o.id === params.id)
+    if (!order) return fail(404, "Not found.")
+    const { kind } = (await request.json()) as { kind: "bill" | "receipt" }
+    if (kind === "receipt" && order.payments.length === 0)
+      return fail(400, "This order has no payment to print a receipt for.", {
+        errors: { kind: ["This order has no payment to print a receipt for."] },
+      })
+    const payload = billPayload(
+      order,
+      kind,
+      actor.full_name,
+      kind === "receipt" ? (order.payments.at(-1) ?? null) : null
+    )
+    payload.reprint = true
+    if (kind === "receipt" && order.status === "refunded")
+      payload.refund = { amount: order.paid, reason: order.refund_reason }
+    cashierJob(payload)
+    return HttpResponse.json({ success: true }, { status: 201 })
+  }),
+
   http.get(apiPath("/auth/approvers/"), ({ request }) => {
     if (!bearerStaff(request))
       return fail(401, "Authentication credentials were not provided.", {
@@ -704,6 +865,7 @@ export const orderHandlers = [
     recompute(order)
     if (order.paid >= order.bill.total) {
       order.status = "paid"
+      order.closed_at = new Date().toISOString()
       const table = findTable(order.table)
       if (table) table.status = "cleaning"
     }
@@ -788,6 +950,7 @@ export const orderHandlers = [
     }
     order.payments.push(payment)
     order.status = "paid"
+    order.closed_at = payment.created_at
     shiftPayments.push({ shift: shift.id, method: "cash", amount: due })
     refreshTotals(shift)
     recompute(order)

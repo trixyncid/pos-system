@@ -26,6 +26,7 @@ export const shiftSchema = z.object({
     other_sales: z.number(),
     cash_in: z.number(),
     cash_out: z.number(),
+    refunds: z.number(),
     expected_cash: z.number(),
     payments: z.number(),
   }),
