@@ -1,3 +1,4 @@
+import { toast } from "sonner"
 import { create } from "zustand"
 
 import { getMe, login, logout } from "@/features/auth/api/auth.ts"
@@ -9,6 +10,7 @@ import {
   resetSessionState,
   setOnUnauthorized,
 } from "@/lib/api.ts"
+import i18n from "@/lib/i18n.ts"
 import { queryClient } from "@/lib/query-client.ts"
 import { clearSession, hasSessionHint, setSession } from "@/lib/session.ts"
 
@@ -87,4 +89,9 @@ export const useSession = create<SessionState>()((set, get) => ({
   },
 }))
 
-setOnUnauthorized(endSession)
+setOnUnauthorized(() => {
+  // Only tell someone who was working; a stale tab at startup just shows sign-in.
+  if (useSession.getState().status === "active")
+    toast.warning(i18n.t("auth.sessionEnded"))
+  endSession()
+})

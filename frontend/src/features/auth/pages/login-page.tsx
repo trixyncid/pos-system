@@ -3,6 +3,7 @@ import { useNavigate } from "@tanstack/react-router"
 import { ArrowRightIcon, StoreIcon } from "lucide-react"
 import { useState } from "react"
 import { useTranslation } from "react-i18next"
+import { toast } from "sonner"
 
 import { RiseIn } from "@/components/motion/rise-in.tsx"
 import { Button } from "@/components/ui/button.tsx"
@@ -17,7 +18,7 @@ import { Spinner } from "@/components/ui/spinner.tsx"
 import { homePath } from "@/features/auth/lib/route-access.ts"
 import { loginSchema } from "@/features/auth/schemas/auth.ts"
 import { useSession } from "@/features/auth/store/session-store.ts"
-import { apiErrorMessage } from "@/lib/api-error.ts"
+import { apiErrorCode, apiErrorMessage } from "@/lib/api-error.ts"
 import { env } from "@/lib/env.ts"
 import { fieldErrors } from "@/lib/form-errors.ts"
 import { applyServerErrors } from "@/lib/form-server-errors.ts"
@@ -41,10 +42,19 @@ export function LoginPage() {
       setFormError(null)
       try {
         const user = await signIn(value)
+        toast.success(t("auth.welcome", { name: user.full_name }))
         await navigate({ to: homePath(user), replace: true })
       } catch (error) {
-        if (!applyServerErrors(formApi, error, ["username", "password"]))
-          setFormError(apiErrorMessage(error))
+        if (applyServerErrors(formApi, error, ["username", "password"])) {
+          toast.error(t("auth.checkFields"))
+          return
+        }
+        const message =
+          apiErrorCode(error) === "invalid_credentials"
+            ? t("auth.invalidCredentials")
+            : apiErrorMessage(error)
+        setFormError(message)
+        toast.error(message)
       }
     },
   })

@@ -1,5 +1,6 @@
 import { ChevronDownIcon, LogOutIcon } from "lucide-react"
 import { useTranslation } from "react-i18next"
+import { toast } from "sonner"
 
 import { StaffAvatar } from "@/components/pos/staff-avatar.tsx"
 import {
@@ -47,7 +48,9 @@ export function UserMenu() {
         <DropdownMenuItem
           className="h-11"
           variant="destructive"
-          onSelect={() => void signOut()}
+          onSelect={() =>
+            void signOut().then(() => toast.success(t("auth.signedOut")))
+          }
         >
           <LogOutIcon />
           {t("common.signOut")}

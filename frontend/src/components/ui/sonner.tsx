@@ -12,9 +12,9 @@ import {
 } from "lucide-react"
 
 /**
- * Toasts always use the light rich colours (green, red, amber on a pale
- * fill), in dark mode too: they stand out from the dark UI instead of
- * blending into it. Top centre, where a tablet user is looking.
+ * Toasts are solid green, red, amber or blue with white text, in dark mode
+ * too, so they stand out from the UI. Top centre, where a tablet user is
+ * looking.
  */
 const Toaster = ({ ...props }: ToasterProps) => {
   return (
@@ -33,6 +33,20 @@ const Toaster = ({ ...props }: ToasterProps) => {
           "--normal-text": "var(--popover-foreground)",
           "--normal-border": "var(--border)",
           "--border-radius": "var(--radius)",
+          // Solid fills with white text, the same in light and dark mode.
+          // Deep shades so white text stays readable (WCAG AA).
+          "--success-bg": "#15803d",
+          "--success-border": "#15803d",
+          "--success-text": "#ffffff",
+          "--error-bg": "#b91c1c",
+          "--error-border": "#b91c1c",
+          "--error-text": "#ffffff",
+          "--warning-bg": "#b45309",
+          "--warning-border": "#b45309",
+          "--warning-text": "#ffffff",
+          "--info-bg": "#1d4ed8",
+          "--info-border": "#1d4ed8",
+          "--info-text": "#ffffff",
         } as React.CSSProperties
       }
       toastOptions={{

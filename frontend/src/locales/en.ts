@@ -27,6 +27,11 @@ export const en: Messages = {
     signIn: "Sign in",
     signingIn: "Signing in…",
     switchAccount: "Sign in as someone else",
+    welcome: "Welcome, {{name}}",
+    signedOut: "You're signed out",
+    sessionEnded: "Your session has ended. Please sign in again.",
+    invalidCredentials: "Username or password is incorrect.",
+    checkFields: "Check the highlighted fields.",
     deleteDigit: "Delete digit",
   },
   nav: {

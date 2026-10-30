@@ -26,6 +26,11 @@ export const id = {
     signIn: "Masuk",
     signingIn: "Masuk…",
     switchAccount: "Masuk dengan akun lain",
+    welcome: "Selamat datang, {{name}}",
+    signedOut: "Anda sudah keluar",
+    sessionEnded: "Sesi Anda berakhir. Silakan masuk lagi.",
+    invalidCredentials: "Username atau kata sandi salah.",
+    checkFields: "Periksa isian yang ditandai.",
     deleteDigit: "Hapus angka",
   },
   nav: {

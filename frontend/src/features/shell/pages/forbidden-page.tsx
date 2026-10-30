@@ -1,5 +1,6 @@
 import { ShieldOffIcon } from "lucide-react"
 import { useTranslation } from "react-i18next"
+import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button.tsx"
 import { useSession } from "@/features/auth/store/session-store.ts"
@@ -17,7 +18,12 @@ export function ForbiddenPage() {
           {t("errors.forbiddenTitle")}
         </h1>
         <p className="text-muted-foreground">{t("errors.forbiddenBody")}</p>
-        <Button size="touch" onClick={() => void signOut()}>
+        <Button
+          size="touch"
+          onClick={() =>
+            void signOut().then(() => toast.success(t("auth.signedOut")))
+          }
+        >
           {t("auth.switchAccount")}
         </Button>
       </div>
