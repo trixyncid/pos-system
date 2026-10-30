@@ -3,19 +3,20 @@ import { useTranslation } from "react-i18next"
 import { toast } from "sonner"
 
 import { Pressable } from "@/components/motion/pressable.tsx"
-import { NumPad } from "@/components/pos/num-pad.tsx"
-import { StaffAvatar } from "@/components/pos/staff-avatar.tsx"
 import { TouchSheet } from "@/components/pos/touch-sheet.tsx"
 import { Button } from "@/components/ui/button.tsx"
 import { Input } from "@/components/ui/input.tsx"
 import { Spinner } from "@/components/ui/spinner.tsx"
-import { PinDots } from "@/features/auth/components/pin-dots.tsx"
 import { useCan } from "@/features/auth/hooks/use-can.ts"
 import { perm } from "@/features/auth/lib/permissions.ts"
+import { useVoidLine } from "@/features/ordering/api/orders.ts"
 import {
-  useApproversQuery,
-  useVoidLine,
-} from "@/features/ordering/api/orders.ts"
+  type Approval,
+  ApprovalPanel,
+  approvalBody,
+  approvalReady,
+  noApproval,
+} from "@/features/ordering/components/approval-panel.tsx"
 import type { OrderLine } from "@/features/ordering/schemas/order.ts"
 import { apiErrorMessage } from "@/lib/api-error.ts"
 import { cn } from "@/lib/utils.ts"
@@ -32,14 +33,12 @@ function Body({
   const { t } = useTranslation()
   const canVoid = useCan(perm.voidSentItem)
   const needsApproval = line.status === "sent" && !canVoid
-  const approvers = useApproversQuery(needsApproval)
   const voidLine = useVoidLine()
   const reasons = t("order.reasons", {
     returnObjects: true,
   }) as unknown as string[]
   const [reason, setReason] = useState("")
-  const [approver, setApprover] = useState<number | null>(null)
-  const [pin, setPin] = useState("")
+  const [approval, setApproval] = useState<Approval>(noApproval)
   const [error, setError] = useState<string | null>(null)
   const [attempt, setAttempt] = useState(0)
 
@@ -50,21 +49,18 @@ function Body({
         orderId,
         lineId: line.id,
         reason,
-        ...(needsApproval && approver !== null
-          ? { approver, approver_pin: pin }
-          : {}),
+        ...(needsApproval ? approvalBody(approval) : {}),
       })
       toast.success(t("order.voided", { name: line.name }))
       onDone()
     } catch (err) {
       setError(apiErrorMessage(err))
       setAttempt((n) => n + 1)
-      setPin("")
+      setApproval((value) => ({ ...value, pin: "" }))
     }
   }
 
-  const ready =
-    reason.trim() && (!needsApproval || (approver !== null && pin.length >= 4))
+  const ready = reason.trim() && (!needsApproval || approvalReady(approval))
 
   return (
     <div className="space-y-6">
@@ -98,57 +94,15 @@ function Body({
       </section>
 
       {needsApproval && (
-        <section className="space-y-3">
-          <div>
-            <h3 className="font-heading font-semibold">
-              {t("order.approval")}
-            </h3>
-            <p className="text-sm text-muted-foreground">
-              {t("order.approvalBody")}
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {approvers.data?.map((person) => (
-              <Pressable
-                key={person.id}
-                role="radio"
-                aria-checked={approver === person.id}
-                onClick={() => {
-                  setApprover(person.id)
-                  setPin("")
-                  setError(null)
-                }}
-                className={cn(
-                  "flex h-14 items-center gap-2 rounded-2xl border pr-4 pl-2 text-sm font-medium transition-colors",
-                  approver === person.id
-                    ? "border-primary bg-primary/10"
-                    : "bg-background"
-                )}
-              >
-                <StaffAvatar name={person.full_name} size="sm" />
-                {person.full_name}
-              </Pressable>
-            ))}
-          </div>
-          {approver !== null && (
-            <div className="mx-auto max-w-xs space-y-3 pt-2">
-              <PinDots
-                length={Math.max(4, pin.length)}
-                filled={pin.length}
-                error={Boolean(error)}
-                attempt={attempt}
-              />
-              <NumPad
-                keyboard
-                deleteLabel={t("auth.deleteDigit")}
-                onDigit={(digit) =>
-                  setPin((value) => (value.length >= 6 ? value : value + digit))
-                }
-                onBackspace={() => setPin((value) => value.slice(0, -1))}
-              />
-            </div>
-          )}
-        </section>
+        <ApprovalPanel
+          value={approval}
+          onChange={(value) => {
+            setApproval(value)
+            setError(null)
+          }}
+          error={Boolean(error)}
+          attempt={attempt}
+        />
       )}
 
       {error && (

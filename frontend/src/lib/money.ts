@@ -67,3 +67,54 @@ export function billTotals(
     total,
   }
 }
+
+export type DiscountKind = "none" | "percent" | "amount"
+
+/** The rupiah a discount takes off (backend payments/billing.order_discount). */
+export function discountAmount(
+  kind: DiscountKind,
+  value: number,
+  subtotal: number
+) {
+  if (kind === "percent") return Math.min(subtotal, percentOf(subtotal, value))
+  if (kind === "amount") return Math.min(subtotal, value)
+  return 0
+}
+
+/**
+ * What some lines of a bill cost on their own, with their share of the
+ * order's discount (backend payments/billing.lines_bill). Used to pay by item.
+ */
+export function shareTotals(
+  part: number,
+  subtotal: number,
+  discount: number,
+  rules: BillRules
+) {
+  const share = subtotal ? Math.round((discount * part) / subtotal) : 0
+  return billTotals(part, share, rules)
+}
+
+/** One guest's part of an even split, rounded up to the cash unit so the last guest pays the least. */
+export function evenPart(remaining: number, parts: number, unit: number) {
+  if (parts <= 1) return remaining
+  const step = Math.max(1, unit)
+  return Math.min(remaining, Math.ceil(remaining / parts / step) * step)
+}
+
+const notes = [10_000, 20_000, 50_000, 100_000] as const
+
+/**
+ * Cash buttons for an amount due: the exact amount, then what guests
+ * usually hand over (the next 10k, 20k, 50k, 100k up), at most four.
+ */
+export function quickCash(due: number) {
+  const amounts = new Set<number>([due])
+  for (const note of notes) {
+    const next = Math.ceil(due / note) * note
+    if (next > due) amounts.add(next)
+  }
+  if (amounts.size < 4)
+    amounts.add(Math.ceil(due / 100_000) * 100_000 + 100_000)
+  return [...amounts].sort((a, b) => a - b).slice(0, 4)
+}

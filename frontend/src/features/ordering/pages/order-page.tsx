@@ -48,6 +48,10 @@ import {
   useSetGuests,
 } from "@/features/ordering/api/orders.ts"
 import { CartPanel } from "@/features/ordering/components/cart-panel.tsx"
+import { useCan } from "@/features/auth/hooks/use-can.ts"
+import { perm } from "@/features/auth/lib/permissions.ts"
+import { usePrintBill } from "@/features/checkout/api/checkout.ts"
+import { DiscountSheet } from "@/features/checkout/components/discount-sheet.tsx"
 import {
   FlightLayer,
   flyToCart,
@@ -82,6 +86,8 @@ export function OrderPage() {
   const merge = useMergeOrder()
   const cancel = useCancelOrder()
   const setGuests = useSetGuests()
+  const printBill = usePrintBill()
+  const canPay = useCan(perm.takePayment)
   const now = useNow()
 
   const [picking, setPicking] = useState<{
@@ -92,6 +98,7 @@ export function OrderPage() {
   const [tableMode, setTableMode] = useState<"move" | "merge" | null>(null)
   const [guestsOpen, setGuestsOpen] = useState(false)
   const [confirmCancel, setConfirmCancel] = useState(false)
+  const [discountOpen, setDiscountOpen] = useState(false)
 
   if (order.isPending)
     return (
@@ -259,6 +266,20 @@ export function OrderPage() {
         onToggleHold={(line) => update(orderId, line.id, { hold: !line.hold })}
         onVoid={setVoiding}
         onSend={send}
+        onDiscount={() => setDiscountOpen(true)}
+        printingBill={printBill.isPending}
+        {...(canPay && {
+          onPay: () =>
+            void navigate({ to: "/checkout/$orderId", params: { orderId } }),
+          onPrintBill: async () => {
+            try {
+              await printBill.mutateAsync(orderId)
+              toast.success(t("checkout.billPrinted"))
+            } catch (error) {
+              toast.error(apiErrorMessage(error))
+            }
+          },
+        })}
         onSendHeld={async () => {
           try {
             await sendHeld.mutateAsync({ orderId })
@@ -297,6 +318,11 @@ export function OrderPage() {
         orderId={orderId}
         line={voiding}
         onClose={() => setVoiding(null)}
+      />
+      <DiscountSheet
+        order={current}
+        open={discountOpen}
+        onClose={() => setDiscountOpen(false)}
       />
       <TablePickerSheet
         mode={tableMode}

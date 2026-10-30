@@ -16,6 +16,7 @@ class JobKind(models.TextChoices):
     VOID = "void", _("Cancellation ticket")
     BILL = "bill", _("Bill")
     RECEIPT = "receipt", _("Receipt")
+    SHIFT = "shift", _("Shift report")
     TEST = "test", _("Test print")
 
 

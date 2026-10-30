@@ -17,8 +17,31 @@ export const lineSchema = z.object({
   added_by_name: z.string(),
   sent_at: z.string().nullable(),
   void_reason: z.string(),
+  /** Settled by a split payment (pay by item); it can no longer be voided. */
+  paid: z.boolean(),
 })
 export type OrderLine = z.infer<typeof lineSchema>
+
+export const billSchema = z.object({
+  subtotal: z.number(),
+  discount: z.number(),
+  service: z.number(),
+  tax: z.number(),
+  rounding: z.number(),
+  total: z.number(),
+})
+export type Bill = z.infer<typeof billSchema>
+
+export const paymentSchema = z.object({
+  id: z.uuid(),
+  method: z.string(),
+  amount: z.number(),
+  tendered: z.number(),
+  change: z.number(),
+  received_by_name: z.string(),
+  created_at: z.string(),
+})
+export type Payment = z.infer<typeof paymentSchema>
 
 export const orderSchema = z.object({
   id: z.uuid(),
@@ -32,6 +55,15 @@ export const orderSchema = z.object({
   waiter: z.string(),
   note: z.string(),
   subtotal: z.number(),
+  discount_kind: z.enum(["none", "percent", "amount"]),
+  discount_value: z.number(),
+  discount_reason: z.string(),
+  /** Computed by the API in the same order as billTotals(): the tablet never sums money itself. */
+  bill: billSchema,
+  paid: z.number(),
+  remaining: z.number(),
+  payments: z.array(paymentSchema),
+  billed_at: z.string().nullable(),
   version: z.number(),
   created_at: z.string(),
   lines: z.array(lineSchema),

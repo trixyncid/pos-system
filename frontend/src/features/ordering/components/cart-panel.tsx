@@ -1,4 +1,12 @@
-import { CheckIcon, PauseIcon, SendIcon, ShoppingBagIcon } from "lucide-react"
+import {
+  BanknoteIcon,
+  CheckIcon,
+  PauseIcon,
+  PercentIcon,
+  PrinterIcon,
+  SendIcon,
+  ShoppingBagIcon,
+} from "lucide-react"
 import { AnimatePresence, motion } from "motion/react"
 import { useEffect, useState, type ReactNode } from "react"
 import { useTranslation } from "react-i18next"
@@ -13,9 +21,9 @@ import type {
   Order,
   OrderLine,
 } from "@/features/ordering/schemas/order.ts"
-import { useOutletQuery } from "@/features/outlet/hooks/use-outlet.ts"
+import { useBillRules } from "@/features/outlet/hooks/use-bill-rules.ts"
 import { CountUp } from "@/components/motion/count-up.tsx"
-import { billTotals, formatIDR } from "@/lib/money.ts"
+import { billTotals, discountAmount, formatIDR } from "@/lib/money.ts"
 import { spring } from "@/lib/motion.ts"
 import { cn } from "@/lib/utils.ts"
 
@@ -95,6 +103,10 @@ export function CartPanel({
   onVoid,
   onSend,
   onSendHeld,
+  onPay,
+  onPrintBill,
+  onDiscount,
+  printingBill,
 }: {
   order: Order
   drafts: DraftLine[]
@@ -105,9 +117,14 @@ export function CartPanel({
   onVoid: (line: OrderLine) => void
   onSend: () => Promise<boolean>
   onSendHeld: () => void
+  /** Present when the user takes payments. */
+  onPay?: () => void
+  onPrintBill?: () => void
+  onDiscount: () => void
+  printingBill: boolean
 }) {
   const { t } = useTranslation()
-  const outlet = useOutletQuery()
+  const rules = useBillRules()
   const landed = useLanded()
   const [justSent, setJustSent] = useState(false)
 
@@ -128,21 +145,22 @@ export function CartPanel({
   const subtotal =
     order.subtotal +
     drafts.reduce((sum, line) => sum + line.unit_price * line.quantity, 0)
-  const rules = outlet.data
-    ? {
-        servicePercent: outlet.data.service_percent,
-        pbjtPercent: outlet.data.pbjt_percent,
-        taxBase: outlet.data.tax_base,
-        rounding: outlet.data.cash_rounding,
-      }
-    : {
-        servicePercent: 0,
-        pbjtPercent: 0,
-        taxBase: "subtotal" as const,
-        rounding: 1,
-      }
-  const bill = billTotals(subtotal, 0, rules)
+  // The API's bill, or a preview of it while new lines are still on this tablet.
+  const bill = drafts.length
+    ? billTotals(
+        subtotal,
+        discountAmount(order.discount_kind, order.discount_value, subtotal),
+        rules
+      )
+    : order.bill
   const empty = drafts.length + order.lines.length === 0
+  // Ready to settle: everything is at the kitchen and nothing waits on this tablet.
+  const settle =
+    drafts.length === 0 &&
+    held.length === 0 &&
+    sent.length > 0 &&
+    !justSent &&
+    onPay !== undefined
 
   return (
     <aside className="flex min-h-0 flex-col border-l bg-background/60">
@@ -277,6 +295,18 @@ export function CartPanel({
       <div className="shrink-0 space-y-3 border-t bg-card/90 p-4 backdrop-blur">
         <div className="space-y-1">
           <TotalRow label={t("order.subtotal")} amount={bill.subtotal} />
+          {bill.discount > 0 && (
+            <TotalRow
+              label={
+                order.discount_kind === "percent"
+                  ? t("checkout.discountPercent", {
+                      value: order.discount_value,
+                    })
+                  : t("checkout.discount")
+              }
+              amount={-bill.discount}
+            />
+          )}
           {bill.service > 0 && (
             <TotalRow
               label={t("order.service", { percent: rules.servicePercent })}
@@ -298,52 +328,87 @@ export function CartPanel({
           )}
           <TotalRow label={t("order.total")} amount={bill.total} strong />
         </div>
-        <Button
-          size="xl"
-          className={cn(
-            "w-full transition-colors",
-            justSent && "bg-success hover:bg-success"
-          )}
-          disabled={sending || (drafts.length === 0 && !justSent)}
-          onClick={async () => {
-            if (await onSend()) setJustSent(true)
-          }}
-        >
-          <AnimatePresence mode="wait" initial={false}>
-            <motion.span
-              key={justSent ? "sent" : sending ? "sending" : "send"}
-              initial={{ y: 14, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              exit={{ y: -14, opacity: 0 }}
-              transition={{ duration: 0.16 }}
-              className="flex items-center gap-2"
+        {sent.length > 0 && drafts.length === 0 && (
+          <div className="flex gap-2">
+            <Button
+              variant="secondary"
+              size="touch"
+              className="flex-1"
+              disabled={order.payments.length > 0}
+              onClick={onDiscount}
             >
-              {justSent ? (
-                <>
-                  <CheckIcon />
-                  {t("order.sent")}
-                </>
-              ) : sending ? (
-                <Spinner />
-              ) : toSend > 0 ? (
-                <>
-                  <SendIcon />
-                  {t("order.sendCount", { count: toSend })}
-                </>
-              ) : drafts.length > 0 ? (
-                <>
-                  <PauseIcon />
-                  {t("order.saveHeld", { count: draftCount })}
-                </>
-              ) : (
-                <>
-                  <SendIcon />
-                  {t("order.send")}
-                </>
-              )}
-            </motion.span>
-          </AnimatePresence>
-        </Button>
+              <PercentIcon />
+              {t("order.discount")}
+            </Button>
+            {onPrintBill && (
+              <Button
+                variant="secondary"
+                size="touch"
+                className="flex-1"
+                disabled={held.length > 0 || printingBill}
+                onClick={onPrintBill}
+              >
+                {printingBill ? <Spinner /> : <PrinterIcon />}
+                {order.status === "billed"
+                  ? t("order.billedBadge")
+                  : t("order.printBill")}
+              </Button>
+            )}
+          </div>
+        )}
+        {settle ? (
+          <Button size="xl" className="w-full" onClick={onPay}>
+            <BanknoteIcon />
+            {t("checkout.payFrom", { amount: formatIDR(order.remaining) })}
+          </Button>
+        ) : (
+          <Button
+            size="xl"
+            className={cn(
+              "w-full transition-colors",
+              justSent && "bg-success hover:bg-success"
+            )}
+            disabled={sending || (drafts.length === 0 && !justSent)}
+            onClick={async () => {
+              if (await onSend()) setJustSent(true)
+            }}
+          >
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.span
+                key={justSent ? "sent" : sending ? "sending" : "send"}
+                initial={{ y: 14, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                exit={{ y: -14, opacity: 0 }}
+                transition={{ duration: 0.16 }}
+                className="flex items-center gap-2"
+              >
+                {justSent ? (
+                  <>
+                    <CheckIcon />
+                    {t("order.sent")}
+                  </>
+                ) : sending ? (
+                  <Spinner />
+                ) : toSend > 0 ? (
+                  <>
+                    <SendIcon />
+                    {t("order.sendCount", { count: toSend })}
+                  </>
+                ) : drafts.length > 0 ? (
+                  <>
+                    <PauseIcon />
+                    {t("order.saveHeld", { count: draftCount })}
+                  </>
+                ) : (
+                  <>
+                    <SendIcon />
+                    {t("order.send")}
+                  </>
+                )}
+              </motion.span>
+            </AnimatePresence>
+          </Button>
+        )}
       </div>
     </aside>
   )

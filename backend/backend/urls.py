@@ -13,6 +13,7 @@ api_v1 = [
     path("catalog/", include("catalog.urls")),
     path("floor/", include("floor.urls")),
     path("", include("orders.urls")),
+    path("", include("shifts.urls")),
     path("printing/", include("printing.urls")),
 ]
 

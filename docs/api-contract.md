@@ -113,7 +113,33 @@ Names, prices and choices are copied onto each line when it is ordered.
 Every change publishes `order.changed` on `orders` and `floor.changed` on `floor`. The floor's table status comes from the open order:
 - `occupied` when nothing is sent yet
 - `ordered` once anything is sent
-- `billed` once the bill is printed (M6)
+- `billed` once the bill is printed. Any change to the order (new lines, a void, a merge, a discount) sets it back to open, since the printed bill is then out of date.
+
+#### Checkout
+
+Every order carries its bill, computed by the API in one order (`payments/billing.py`, mirrored by `billTotals` in `frontend/src/lib/money.ts`): subtotal → discount → service → PBJT → cash rounding.
+
+Order fields: `discount_kind: none|percent|amount`, `discount_value`, `discount_reason`, `bill: { subtotal, discount, service, tax, rounding, total }`, `paid`, `remaining`, `payments: [{ id, method, amount, tendered, change, received_by_name, created_at }]`, `billed_at`. Each line has `paid` (settled by a pay-by-item payment; it can no longer be voided).
+
+| Method | Path | Permission | Notes |
+|---|---|---|---|
+| POST | `/orders/{id}/discount/` | `take_order` | `{ kind, value, reason, approver?, approver_pin? }`. Without `apply_discount`, a manager approves by PIN (`approval_required`, `approval_rejected`). A reason is required. Locked once any payment is taken. `kind: none` removes it. Audited. |
+| POST | `/orders/{id}/bill/` | `take_payment` | Prints the bill at the `cashier` station and marks the order `billed`. Refused while lines are held. |
+| POST | `/orders/{id}/payments/` | `take_payment` | `{ id, method: cash, tendered, amount?, line_ids? }`. Idempotent by `id`. `line_ids` pays those items plus their share of discount, service and tax; the last unpaid items settle the exact remainder. `amount` pays part of what is left (even split). Neither pays everything left. Needs an open shift (`no_open_shift`). Cash below the amount due is refused. Once fully paid the order is `paid`, the table needs cleaning, and a receipt prints at `cashier`. Audited. |
+
+### Shifts (`/shifts/`)
+
+One drawer, so one open shift at a time. Reading needs any of `open_shift`, `close_shift`, `take_payment` or `open_drawer`.
+
+| Method | Path | Permission | Notes |
+|---|---|---|---|
+| GET | `/shifts/` | any of the above | The 20 most recent, newest first |
+| GET | `/shifts/current/` | any of the above | The open shift, or `data: null` |
+| POST | `/shifts/` | `open_shift` | `{ opening_cash }` |
+| POST | `/shifts/{id}/movements/` | `open_drawer` | `{ kind: in\|out, amount, reason }`. Cash out can't exceed what the drawer should hold. |
+| POST | `/shifts/{id}/close/` | `close_shift` | `{ counted_cash, note }`. Freezes `expected_cash`, keeps `variance`, prints the shift report at `cashier`. |
+
+Shift: `{ id, created_at, opened_by_name, opening_cash, closed_at, closed_by_name, counted_cash, expected_cash, variance, note, totals: { cash_sales, other_sales, cash_in, cash_out, expected_cash, payments }, movements: [{ id, kind, amount, reason, by_name, created_at }] }`. Open, cash in/out and close are audited.
 
 ### Printing (`/printing/jobs/`)
 
@@ -124,10 +150,11 @@ Every change publishes `order.changed` on `orders` and `floor.changed` on `floor
 | POST | `/printing/jobs/{id}/reprint/` | `reprint` | A copy marked `reprint: true`, audited |
 | POST | `/printing/jobs/test/` | `print_station` | `{ station }` |
 
-Job: `{ id, station, kind: kitchen|void|bill|receipt|test, status, payload, attempts, error, created_at, printed_at }`.
+Job: `{ id, station, kind: kitchen|void|bill|receipt|shift|test, status, payload, attempts, error, created_at, printed_at }`.
 
 - The payload holds everything the ticket shows (label, number, by, time, lines with choices, note, seat and void reason), so the station never looks anything up.
-- One job is queued per station (`kitchen`, `bar`); lines whose category prints nowhere (`none`, the snack bar) get no job.
+- Bills, receipts and shift reports go to the `cashier` station. Their payload adds the outlet header, `line_totals`, `bill`, `rates`, `discount`, `payment` and `paid` (or `shift` for a report).
+- One kitchen job is queued per station (`kitchen`, `bar`); lines whose category prints nowhere (`none`, the snack bar) get no job.
 - New jobs publish `print.job` on the `print` stream.
 
 Escalation rules (both the API and the mock enforce them): nobody can grant a permission or give a role that does more than they can themselves, edit or reset the PIN of someone who can do more than them, deactivate themselves, change their own roles, or remove their own access to staff and roles.
@@ -147,4 +174,4 @@ Escalation rules (both the API and the mock enforce them): nobody can grant a pe
 
 ## Planned (filled in milestone by milestone)
 
-Floor (areas, tables), catalog (categories, products, modifiers, recipes), orders (open, add lines, send, hold/fire, void, transfer, merge, split), payments, shifts and cash movements, inventory movements, print jobs, staff and roles, reports, audit log.
+Floor (areas, tables), catalog (categories, products, modifiers, recipes), inventory movements, print jobs, staff and roles, reports, audit log.

@@ -22,6 +22,7 @@ export type Section = "service" | "overview" | "catalog" | "people" | "system"
 
 type NavKey =
   | "order"
+  | "checkout"
   | "floor"
   | "snackbar"
   | "shifts"
@@ -63,6 +64,16 @@ export const pages: readonly Page[] = [
     icon: LayoutGridIcon,
     anyOf: [perm.takeOrder],
     milestone: "M5",
+    hidden: true,
+  },
+  {
+    key: "checkout",
+    path: "/checkout",
+    shell: "pos",
+    section: "service",
+    icon: WalletIcon,
+    anyOf: [perm.takePayment],
+    milestone: "M6",
     hidden: true,
   },
   {

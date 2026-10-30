@@ -8,6 +8,10 @@ from orders.models import Channel, Order, OrderLine, OrderType
 class OrderLineSerializer(serializers.ModelSerializer):
     total = serializers.IntegerField(read_only=True)
     added_by_name = serializers.CharField(source="added_by.full_name", read_only=True)
+    paid = serializers.SerializerMethodField()
+
+    def get_paid(self, line) -> bool:
+        return line.payment_id is not None
 
     class Meta:
         model = OrderLine
@@ -26,13 +30,28 @@ class OrderLineSerializer(serializers.ModelSerializer):
             "added_by_name",
             "sent_at",
             "void_reason",
+            "paid",
         )
+
+
+class PaymentSerializer(serializers.Serializer):
+    id = serializers.UUIDField()
+    method = serializers.CharField()
+    amount = serializers.IntegerField()
+    tendered = serializers.IntegerField()
+    change = serializers.IntegerField()
+    received_by_name = serializers.CharField(source="received_by.full_name")
+    created_at = serializers.DateTimeField()
 
 
 class OrderSerializer(serializers.ModelSerializer):
     lines = OrderLineSerializer(many=True, read_only=True)
     waiter = serializers.CharField(source="opened_by.full_name", read_only=True)
     subtotal = serializers.SerializerMethodField()
+    bill = serializers.SerializerMethodField()
+    paid = serializers.SerializerMethodField()
+    remaining = serializers.SerializerMethodField()
+    payments = PaymentSerializer(many=True, read_only=True)
 
     class Meta:
         model = Order
@@ -48,6 +67,14 @@ class OrderSerializer(serializers.ModelSerializer):
             "waiter",
             "note",
             "subtotal",
+            "discount_kind",
+            "discount_value",
+            "discount_reason",
+            "bill",
+            "paid",
+            "remaining",
+            "payments",
+            "billed_at",
             "version",
             "created_at",
             "lines",
@@ -55,6 +82,25 @@ class OrderSerializer(serializers.ModelSerializer):
 
     def get_subtotal(self, order) -> int:
         return sum(line.total for line in order.lines.all() if line.status != "void")
+
+    def _bill(self, order):
+        """Computed from the prefetched lines; the outlet is loaded once per response."""
+        from outlet.models import Outlet
+        from payments.billing import compute, order_discount
+
+        if "outlet" not in self.context:
+            self.context["outlet"] = Outlet.load()
+        subtotal = self.get_subtotal(order)
+        return compute(subtotal, order_discount(order, subtotal), self.context["outlet"])
+
+    def get_bill(self, order) -> dict:
+        return self._bill(order).as_dict()
+
+    def get_paid(self, order) -> int:
+        return sum(payment.amount for payment in order.payments.all())
+
+    def get_remaining(self, order) -> int:
+        return max(0, self._bill(order).total - self.get_paid(order))
 
 
 class OpenOrderSerializer(serializers.Serializer):
@@ -112,3 +158,19 @@ class MergeSerializer(serializers.Serializer):
 
 class GuestsSerializer(serializers.Serializer):
     guests = serializers.IntegerField(min_value=1, max_value=50)
+
+
+class DiscountSerializer(serializers.Serializer):
+    kind = serializers.ChoiceField(choices=["none", "percent", "amount"])
+    value = serializers.IntegerField(min_value=0, default=0)
+    reason = serializers.CharField(max_length=120, allow_blank=True, default="")
+    approver = serializers.IntegerField(required=False)
+    approver_pin = serializers.RegexField(r"^\d{4,6}$", required=False)
+
+
+class PaySerializer(serializers.Serializer):
+    id = serializers.UUIDField()
+    method = serializers.ChoiceField(choices=["cash"], default="cash")
+    tendered = serializers.IntegerField(min_value=0, max_value=100_000_000)
+    amount = serializers.IntegerField(min_value=1, required=False)
+    line_ids = serializers.ListField(child=serializers.UUIDField(), required=False, allow_empty=False)

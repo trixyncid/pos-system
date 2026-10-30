@@ -58,8 +58,17 @@ def _locked(order_id) -> Order:
 
 
 def _assert_open(order: Order) -> None:
-    if order.status != OrderStatus.OPEN:
+    """Still at its table: open, or billed and waiting to be paid."""
+    if order.status not in SEATED:
         raise ValidationError({"detail": "This order is closed.", "code": "order_closed"})
+
+
+def _unbill(order: Order) -> None:
+    """A change after the bill was printed makes that bill wrong: the order is open again."""
+    if order.status == OrderStatus.BILLED:
+        order.status = OrderStatus.OPEN
+        order.billed_at = None
+        order.save(update_fields=["status", "billed_at", "updated_at"])
 
 
 def _assert_table_free(table: Table, exclude: Order | None = None) -> None:
@@ -160,6 +169,8 @@ def add_lines(*, user: User, order_id, lines: list[LineInput], send: bool) -> Or
                 added_by=user,
             )
         )
+    if created:
+        _unbill(order)
     if send and created:
         _send(order, user, created)
     _changed(order)
@@ -206,6 +217,7 @@ def send_held(*, user: User, order_id, line_ids: list | None = None) -> Order:
     lines = list(held)
     if not lines:
         raise ValidationError({"detail": "Nothing is waiting to be sent."})
+    _unbill(order)
     _send(order, user, lines)
     _changed(order)
     return order
@@ -220,6 +232,7 @@ def update_held_line(*, order_id, line_id, quantity=None, note=None, seat=None) 
         raise ValidationError({"detail": "This line no longer exists."})
     if line.status != LineStatus.HELD:
         raise ValidationError({"detail": "Sent items can only be voided."})
+    _unbill(order)
     if quantity is not None:
         line.quantity = quantity
     if note is not None:
@@ -255,6 +268,9 @@ def void_line(*, user: User, order_id, line_id, reason: str, approver: User | No
     line = order.lines.filter(pk=line_id).first()
     if line is None or line.status == LineStatus.VOID:
         raise ValidationError({"detail": "This line is already gone."})
+    if line.payment_id:
+        raise ValidationError({"detail": "This item is already paid."})
+    _unbill(order)
     if line.status == LineStatus.HELD:
         line.delete()
         _changed(order, floor=False)
@@ -301,6 +317,7 @@ def merge_orders(*, target_id, source_id) -> Order:
     source = _locked(source_id)
     _assert_open(target)
     _assert_open(source)
+    _unbill(target)
     source.lines.update(order=target)
     target.guests += source.guests
     target.save(update_fields=["guests", "updated_at"])

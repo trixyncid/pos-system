@@ -31,6 +31,12 @@ class OrderStatus(models.TextChoices):
     VOID = "void", _("Cancelled")
 
 
+class DiscountKind(models.TextChoices):
+    NONE = "none", _("None")
+    PERCENT = "percent", _("Percent")
+    AMOUNT = "amount", _("Amount")
+
+
 #: Orders that still hold their table.
 SEATED = (OrderStatus.OPEN, OrderStatus.BILLED)
 
@@ -61,6 +67,20 @@ class Order(BaseModel):
         verbose_name=_("merged into"),
     )
     closed_at = models.DateTimeField(_("closed at"), null=True, blank=True)
+    billed_at = models.DateTimeField(_("bill printed at"), null=True, blank=True)
+    discount_kind = models.CharField(
+        _("discount"), max_length=8, choices=DiscountKind.choices, default=DiscountKind.NONE
+    )
+    discount_value = models.PositiveIntegerField(
+        _("discount value"), default=0, help_text=_("Percent for a percent discount, rupiah for an amount.")
+    )
+    discount_reason = models.CharField(_("discount reason"), max_length=120, blank=True, default="")
+    discount_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True, related_name="+"
+    )
+    discount_approved_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True, related_name="+"
+    )
     # Bumped on every change, so a tablet can tell its copy is stale.
     version = models.PositiveIntegerField(_("version"), default=1)
 
@@ -113,6 +133,10 @@ class OrderLine(BaseModel):
         settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+", verbose_name=_("added by")
     )
     sent_at = models.DateTimeField(_("sent at"), null=True, blank=True)
+    # Set when this line was paid on its own (split by item).
+    payment = models.ForeignKey(
+        "payments.Payment", on_delete=models.SET_NULL, null=True, blank=True, related_name="lines"
+    )
     voided_at = models.DateTimeField(_("voided at"), null=True, blank=True)
     voided_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,

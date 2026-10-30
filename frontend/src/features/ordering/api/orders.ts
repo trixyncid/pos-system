@@ -1,4 +1,9 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import {
+  type QueryKey,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query"
 import { z } from "zod"
 
 import { floorKeys } from "@/features/floor/api/floor.ts"
@@ -55,17 +60,19 @@ export function useApproversQuery(enabled: boolean) {
 }
 
 /** Every order change moves the floor too (status, total), so both refresh. */
-function useOrderMutation<TVars>(
+export function useOrderMutation<TVars>(
   fn: (vars: TVars) => Promise<Order>,
-  silent = true
+  silent = true,
+  /** More queries the change moves (a payment moves the cash drawer). */
+  alsoRefresh: readonly QueryKey[] = []
 ) {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: fn,
     onSuccess: (order) => {
       queryClient.setQueryData(orderKeys.detail(order.id), order)
-      void queryClient.invalidateQueries({ queryKey: floorKeys.all })
-      void queryClient.invalidateQueries({ queryKey: orderKeys.open() })
+      for (const queryKey of [floorKeys.all, orderKeys.open(), ...alsoRefresh])
+        void queryClient.invalidateQueries({ queryKey })
     },
     meta: { silent },
   })

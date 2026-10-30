@@ -13,17 +13,21 @@ from orders import services
 from orders.models import SEATED, LineStatus, Order, OrderLine
 from orders.serializers import (
     AddLinesSerializer,
+    DiscountSerializer,
     GuestsSerializer,
     MergeSerializer,
     MoveSerializer,
     OpenOrderSerializer,
     OrderSerializer,
+    PaySerializer,
     SendSerializer,
     UpdateLineSerializer,
     VoidSerializer,
 )
+from payments import services as checkout
 
 TakeOrder = RequirePermission("accounts.take_order")
+TakePayment = RequirePermission("accounts.take_payment")
 
 
 class OrderViewSet(viewsets.GenericViewSet):
@@ -32,14 +36,26 @@ class OrderViewSet(viewsets.GenericViewSet):
     `?table=` narrows it to one table.
     """
 
-    permission_classes = [TakeOrder]
     serializer_class = OrderSerializer
     pagination_class = None
 
+    def get_permissions(self):
+        if self.action in {"bill", "payments"}:
+            return [TakePayment]
+        return [TakeOrder]
+
     def get_queryset(self):
         return Order.objects.select_related("table", "opened_by").prefetch_related(
-            Prefetch("lines", queryset=OrderLine.objects.select_related("added_by").order_by("created_at"))
+            Prefetch("lines", queryset=OrderLine.objects.select_related("added_by").order_by("created_at")),
+            "payments__received_by",
         )
+
+    def _approver(self, data):
+        if data.get("approver") is None:
+            return None
+        if not data.get("approver_pin"):
+            raise ValidationError({"approver_pin": ["Enter the approving manager's PIN."]})
+        return services.check_approver(approver_id=data["approver"], pin=data["approver_pin"])
 
     def _reply(self, order, status=200):
         return ok(self.get_serializer(self.get_queryset().get(pk=order.pk)).data, status=status)
@@ -107,13 +123,7 @@ class OrderViewSet(viewsets.GenericViewSet):
     def void_line(self, request, pk=None, line_id=None):
         data = VoidSerializer(data=request.data)
         data.is_valid(raise_exception=True)
-        approver = None
-        if data.validated_data.get("approver") is not None:
-            if not data.validated_data.get("approver_pin"):
-                raise ValidationError({"approver_pin": ["Enter the approving manager's PIN."]})
-            approver = services.check_approver(
-                approver_id=data.validated_data["approver"], pin=data.validated_data["approver_pin"]
-            )
+        approver = self._approver(data.validated_data)
         order, line, authorised_by = services.void_line(
             user=request.user,
             order_id=pk,
@@ -167,3 +177,52 @@ class OrderViewSet(viewsets.GenericViewSet):
         order = services.cancel_order(order_id=pk)
         emit(request, "order.cancel", target=order)
         return self._reply(order)
+
+    @extend_schema(request=DiscountSerializer, responses=OrderSerializer)
+    @action(detail=True, methods=["post"])
+    def discount(self, request, pk=None):
+        data = DiscountSerializer(data=request.data)
+        data.is_valid(raise_exception=True)
+        order, authorised_by = checkout.set_discount(
+            user=request.user,
+            order_id=pk,
+            kind=data.validated_data["kind"],
+            value=data.validated_data["value"],
+            reason=data.validated_data["reason"],
+            approver=self._approver(data.validated_data),
+        )
+        emit(
+            request,
+            "order.discount",
+            target=order,
+            target_label=f"#{order.number}",
+            metadata={
+                "kind": order.discount_kind,
+                "value": order.discount_value,
+                "reason": order.discount_reason,
+                "approved_by": authorised_by.full_name,
+            },
+        )
+        return self._reply(order)
+
+    @extend_schema(request=None, responses=OrderSerializer)
+    @action(detail=True, methods=["post"])
+    def bill(self, request, pk=None):
+        return self._reply(checkout.print_bill(user=request.user, order_id=pk))
+
+    @extend_schema(request=PaySerializer, responses=OrderSerializer)
+    @action(detail=True, methods=["post"])
+    def payments(self, request, pk=None):
+        data = PaySerializer(data=request.data)
+        data.is_valid(raise_exception=True)
+        order, payment = checkout.pay(
+            user=request.user,
+            order_id=pk,
+            payment_id=data.validated_data["id"],
+            method=data.validated_data["method"],
+            tendered=data.validated_data["tendered"],
+            amount=data.validated_data.get("amount"),
+            line_ids=data.validated_data.get("line_ids"),
+        )
+        emit(request, "order.payment", target=order, metadata={"amount": payment.amount, "method": payment.method})
+        return self._reply(order, status=201)

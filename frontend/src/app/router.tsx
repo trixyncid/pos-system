@@ -145,7 +145,7 @@ function pageRoute(page: Page) {
   })
 }
 
-// The floor and the order screen are linked to by name, so they are declared
+// The floor, order, checkout and shift screens are linked to by name, so they are declared
 // explicitly to keep their paths typed; other catalog pages come from the loop.
 const floorRoute = createRoute({
   getParentRoute: () => posRoute,
@@ -165,7 +165,30 @@ const orderRoute = createRoute({
   ),
 })
 
-const explicitPages = new Set<Page["key"]>(["floor", "order"])
+const checkoutRoute = createRoute({
+  getParentRoute: () => posRoute,
+  path: "/checkout/$orderId",
+  component: lazyRouteComponent(
+    () => import("@/features/checkout/pages/checkout-page.tsx"),
+    "CheckoutPage"
+  ),
+})
+
+const shiftsRoute = createRoute({
+  getParentRoute: () => posRoute,
+  path: "/shifts",
+  component: lazyRouteComponent(
+    () => import("@/features/shifts/pages/shifts-page.tsx"),
+    "ShiftsPage"
+  ),
+})
+
+const explicitPages = new Set<Page["key"]>([
+  "floor",
+  "order",
+  "checkout",
+  "shifts",
+])
 
 const posPages = pages
   .filter((page) => page.shell === "pos" && !explicitPages.has(page.key))
@@ -191,7 +214,13 @@ const routeTree = rootRoute.addChildren([
   appRoute.addChildren([
     indexRoute,
     forbiddenRoute,
-    posRoute.addChildren([floorRoute, orderRoute, ...posPages]),
+    posRoute.addChildren([
+      floorRoute,
+      orderRoute,
+      checkoutRoute,
+      shiftsRoute,
+      ...posPages,
+    ]),
     adminRoute.addChildren([adminIndexRoute, ...adminPages]),
   ]),
 ])

@@ -91,3 +91,31 @@ test("a waiter seats a table, orders with choices and sends to the kitchen", asy
     page.getByRole("button", { name: "Meja 3, Dipesan" })
   ).toBeVisible()
 })
+
+test("a cashier takes a discount with manager approval and is paid in cash", async ({
+  page,
+}) => {
+  await page.goto("/login")
+  await page.getByRole("button", { name: "Manager" }).click()
+  await page.getByRole("button", { name: "Masuk" }).click()
+  await expect(page).toHaveURL(/\/floor$/)
+
+  await page.getByRole("button", { name: /^Meja 2,/ }).click()
+  await expect(page).toHaveURL(/\/order\//)
+  await page.getByRole("button", { name: "Diskon" }).click()
+  const sheet = page.getByRole("dialog", { name: "Diskon tagihan" })
+  await sheet.getByRole("radio", { name: "10%" }).click()
+  await sheet.getByRole("radio", { name: "Pelanggan tetap" }).click()
+  await sheet.getByRole("button", { name: "Pakai diskon" }).click()
+  await expect(page.getByText("Diskon dipakai")).toBeVisible()
+
+  await page.getByRole("button", { name: /^Bayar ·/ }).click()
+  await expect(page).toHaveURL(/\/checkout\//)
+  await page.getByRole("button", { name: "Uang pas" }).click()
+  await page.getByRole("button", { name: /^Terima/ }).click()
+  await expect(page.getByText("Pembayaran diterima")).toBeVisible()
+  await page.getByRole("button", { name: "Kembali ke denah" }).click()
+  await expect(
+    page.getByRole("button", { name: "Meja 2, Perlu dibersihkan" })
+  ).toBeVisible()
+})

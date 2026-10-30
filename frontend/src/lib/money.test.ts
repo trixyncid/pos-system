@@ -1,4 +1,13 @@
-import { billTotals, formatIDR, percentOf, roundCash } from "@/lib/money.ts"
+import {
+  billTotals,
+  discountAmount,
+  evenPart,
+  formatIDR,
+  percentOf,
+  quickCash,
+  roundCash,
+  shareTotals,
+} from "@/lib/money.ts"
 
 describe("money", () => {
   it("formats rupiah without decimals", () => {
@@ -50,5 +59,34 @@ describe("billTotals", () => {
       discount: 5_000,
       total: 0,
     })
+  })
+})
+
+describe("checkout helpers", () => {
+  const rules = {
+    servicePercent: 5,
+    pbjtPercent: 10,
+    taxBase: "subtotal_with_service" as const,
+    rounding: 100,
+  }
+
+  it("matches the backend for a percent discount", () => {
+    // backend payments/test_payments: 44.000 − 10% → 45.700
+    const discount = discountAmount("percent", 10, 44_000)
+    expect(billTotals(44_000, discount, rules).total).toBe(45_700)
+  })
+
+  it("prices one item's share like the backend", () => {
+    expect(shareTotals(28_000, 44_000, 0, rules).total).toBe(32_300)
+  })
+
+  it("splits evenly, rounding parts up to the cash unit", () => {
+    expect(evenPart(50_800, 3, 100)).toBe(17_000)
+    expect(evenPart(16_800, 1, 100)).toBe(16_800)
+  })
+
+  it("offers the exact amount and the notes guests hand over", () => {
+    expect(quickCash(50_800)).toEqual([50_800, 60_000, 100_000, 200_000])
+    expect(quickCash(100_000)).toEqual([100_000, 200_000])
   })
 })

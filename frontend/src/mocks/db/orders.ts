@@ -10,7 +10,9 @@ import {
   modifierGroups,
   products,
 } from "@/mocks/db/catalog.ts"
+import { billTotals, percentOf, type BillRules } from "@/lib/money.ts"
 import { areas } from "@/mocks/db/floor.ts"
+import { outlet } from "@/mocks/db/outlet.ts"
 import { staff } from "@/mocks/db/staff.ts"
 
 export const orders: Order[] = []
@@ -30,11 +32,74 @@ export function stationOf(productId: string) {
   return categories.find((c) => c.id === product?.category)?.station ?? "none"
 }
 
+export function billRules(): BillRules {
+  return {
+    servicePercent: outlet.service_percent,
+    pbjtPercent: outlet.pbjt_percent,
+    taxBase: outlet.tax_base,
+    rounding: outlet.cash_rounding,
+  }
+}
+
+/** backend payments/billing.order_discount */
+export function discountOf(order: Order, subtotal: number) {
+  if (order.discount_kind === "percent")
+    return Math.min(subtotal, percentOf(subtotal, order.discount_value))
+  if (order.discount_kind === "amount")
+    return Math.min(subtotal, order.discount_value)
+  return 0
+}
+
+/** backend payments/billing.lines_bill: the order's discount is spread in proportion. */
+export function linesBill(order: Order, lines: OrderLine[]) {
+  const part = lines.reduce((sum, line) => sum + line.total, 0)
+  const share = order.subtotal
+    ? Math.round((discountOf(order, order.subtotal) * part) / order.subtotal)
+    : 0
+  return billTotals(part, share, billRules())
+}
+
 export function recompute(order: Order) {
   order.subtotal = order.lines
     .filter((line) => line.status !== "void")
     .reduce((sum, line) => sum + line.total, 0)
+  order.bill = billTotals(
+    order.subtotal,
+    discountOf(order, order.subtotal),
+    billRules()
+  )
+  order.paid = order.payments.reduce((sum, p) => sum + p.amount, 0)
+  order.remaining = Math.max(0, order.bill.total - order.paid)
   order.version += 1
+}
+
+/** A fresh order, as the API opens one. */
+export function blankOrder(
+  fields: Pick<
+    Order,
+    "id" | "table" | "table_label" | "guests" | "waiter" | "created_at"
+  > &
+    Partial<Order>
+): Order {
+  return {
+    number: takeNumber(),
+    channel: "restaurant",
+    type: "dine_in",
+    status: "open",
+    note: "",
+    subtotal: 0,
+    discount_kind: "none",
+    discount_value: 0,
+    discount_reason: "",
+    bill: billTotals(0, 0, billRules()),
+    paid: 0,
+    remaining: 0,
+    payments: [],
+    billed_at: null,
+    version: 0,
+    lines: [],
+    ...fields,
+  }
 }
 
 export function makeLine(
@@ -85,6 +150,7 @@ export function makeLine(
           ).toISOString()
         : null,
     void_reason: "",
+    paid: false,
   }
 }
 
@@ -99,22 +165,20 @@ function seed(
   const table = areas
     .flatMap((area) => area.tables)
     .find((t) => t.label === label)!
-  const order: Order = {
+  const order = blankOrder({
     id: mockId(),
-    number: takeNumber(),
-    channel: "restaurant",
-    type: "dine_in",
     table: table.id,
     table_label: table.label,
     guests,
     status,
     waiter,
-    note: "",
-    subtotal: 0,
-    version: 0,
     created_at: new Date(Date.now() - minutes * 60_000).toISOString(),
+    billed_at:
+      status === "billed"
+        ? new Date(Date.now() - 3 * 60_000).toISOString()
+        : null,
     lines,
-  }
+  })
   recompute(order)
   orders.push(order)
 }
@@ -235,4 +299,58 @@ export function ticketPayload(
 
 export function staffName(id: number) {
   return staff.find((member) => member.id === id)?.full_name ?? "?"
+}
+
+/** backend printing/tickets.bill_payload */
+export function billPayload(
+  order: Order,
+  kind: "bill" | "receipt",
+  by: string,
+  payment: Order["payments"][number] | null = null
+): TicketPayload {
+  const lines = order.lines.filter((line) => line.status !== "void")
+  return {
+    ...ticketPayload(order, lines, "cashier", kind, by),
+    outlet: {
+      name: outlet.name,
+      address: outlet.address,
+      header: outlet.receipt_header,
+      footer: outlet.receipt_footer,
+      npwpd: outlet.npwpd,
+    },
+    line_totals: lines.map((line) => line.total),
+    bill: order.bill,
+    rates: { service: outlet.service_percent, pbjt: outlet.pbjt_percent },
+    discount:
+      order.discount_kind === "none"
+        ? null
+        : {
+            kind: order.discount_kind,
+            value: order.discount_value,
+            reason: order.discount_reason,
+          },
+    payment: payment && {
+      method: payment.method,
+      amount: payment.amount,
+      tendered: payment.tendered,
+      change: payment.change,
+    },
+    paid: order.paid,
+  }
+}
+
+export function pushJob(payload: TicketPayload) {
+  const job: PrintJob = {
+    id: mockId(),
+    station: payload.station,
+    kind: payload.kind,
+    status: "queued",
+    payload,
+    attempts: 0,
+    error: "",
+    created_at: new Date().toISOString(),
+    printed_at: null,
+  }
+  printJobs.push(job)
+  return job
 }

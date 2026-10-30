@@ -30,7 +30,7 @@ import type { PrintJob } from "@/features/printing/schemas/print-job.ts"
 import { spring } from "@/lib/motion.ts"
 import { cn } from "@/lib/utils.ts"
 
-const STATIONS = ["kitchen", "bar"] as const
+const STATIONS = ["kitchen", "bar", "cashier"] as const
 const COLUMNS: Columns = 48
 const storageKey = "pos.station.stations"
 
