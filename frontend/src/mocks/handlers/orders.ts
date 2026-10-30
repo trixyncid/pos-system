@@ -19,6 +19,7 @@ import {
   stationOf,
   ticketPayload,
 } from "@/mocks/db/orders.ts"
+import { deductSale, returnVoid } from "@/mocks/db/inventory.ts"
 import {
   currentShift,
   refreshTotals,
@@ -206,6 +207,7 @@ function send(order: Order, lines: OrderLine[], actor: MockStaff) {
   const now = new Date().toISOString()
   for (const line of lines)
     Object.assign(line, { status: "sent", sent_at: now })
+  deductSale(order.number, lines, actor.full_name)
   queue(order, lines, "kitchen", actor)
 }
 
@@ -380,6 +382,7 @@ export const orderHandlers = [
       const approval = approve(actor, perm.voidSentItem, body, "void")
       if (approval.error) return approval.error
       Object.assign(line, { status: "void", void_reason: body.reason.trim() })
+      returnVoid(order.number, line, actor.full_name)
       queue(order, [line], "void", actor)
       return changed(order)
     }

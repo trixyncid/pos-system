@@ -16,6 +16,7 @@ from rest_framework.exceptions import PermissionDenied, ValidationError
 from accounts.models import User
 from catalog.models import Product, ProductKind
 from floor.models import Table
+from inventory import services as inventory
 from orders.models import SEATED, LineStatus, Order, OrderLine, OrderStatus
 from printing.models import JobKind, PrintJob
 from printing.tickets import ticket_payload
@@ -184,6 +185,7 @@ def _send(order: Order, user: User, lines: list[OrderLine]) -> list[PrintJob]:
         line.status = LineStatus.SENT
         line.sent_at = now
     OrderLine.objects.bulk_update(lines, ["status", "sent_at"])
+    inventory.deduct_sale(order=order, lines=lines, user=user)
     return _queue_tickets(order, user, lines, JobKind.KITCHEN)
 
 
@@ -286,6 +288,7 @@ def void_line(*, user: User, order_id, line_id, reason: str, approver: User | No
     line.voided_by = authorised_by
     line.void_reason = reason.strip()
     line.save()
+    inventory.return_void(order=order, line=line, user=user)
     _queue_tickets(order, user, [line], JobKind.VOID)
     _changed(order)
     return order, line, authorised_by

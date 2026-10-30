@@ -83,6 +83,8 @@ class Product(BaseModel):
     tax_category = models.CharField(_("tax"), max_length=8, choices=TaxCategory.choices, default=TaxCategory.PBJT)
     track_stock = models.BooleanField(_("track stock"), default=False)
     low_stock_threshold = models.DecimalField(_("low stock at"), max_digits=12, decimal_places=3, null=True, blank=True)
+    # Cached from the inventory ledger (inventory.StockMovement); only inventory.services writes it.
+    stock = models.DecimalField(_("on hand"), max_digits=12, decimal_places=3, default=0)
     image = models.ImageField(_("photo"), upload_to="products/", blank=True)
     is_available = models.BooleanField(
         _("available"), default=True, help_text=_("Off shows the item as sold out on the order screen.")

@@ -138,6 +138,24 @@ The scanner looks products up on the tablet from the cached catalog (`GET /catal
 
 **Tax per line.** Each order line keeps a snapshot of its product's `tax_category`. PBJT is charged only on the `pbjt` part of the bill; retail goods (`ppn`, `none`) are priced tax-inclusive or untaxed. Counter sales (`channel: snackbar`) carry no service charge.
 
+### Inventory (`/inventory/`, needs `accounts.manage_stock`)
+
+Stock lives on tracked products (`track_stock`). `Product.stock` caches the balance of an append-only ledger (`StockMovement`) and is only written next to a new movement, under a row lock.
+
+- **Sales:** sending lines takes stock out: a tracked item itself, and each tracked ingredient of its recipe (`recipe quantity × quantity`). Held lines take nothing until sent. Sales never block on stock, so on hand can go negative until a count corrects it.
+- **Voids:** voiding a sent line returns the item's own stock; recipe ingredients stay used (the food may be made).
+
+| Method | Path | Notes |
+|---|---|---|
+| GET | `/inventory/stock/?search=&kind=ingredient\|retail&status=low\|out` | Paginated. `{ id, name, kind, unit, sku, barcode, category_name, image_url, stock, low_stock_threshold, cost, value, status: ok\|low\|out }` |
+| GET | `/inventory/stock/summary/` | `{ tracked, low, out, value }` |
+| GET | `/inventory/movements/?product=&kind=` | Paginated ledger, newest first: `{ id, product, product_name, unit, kind: sale\|void\|receive\|waste\|count, quantity (signed), balance, unit_cost, reason, order_number, by_name, created_at }` |
+| POST | `/inventory/movements/receive/` | `{ id, supplier, note, lines: [{ product, quantity, unit_cost }] }`. Idempotent by `id`. Moves each item's cost to the weighted average of what was on hand and what arrived. Audited. |
+| POST | `/inventory/movements/waste/` | `{ product, quantity, reason }`. Audited. |
+| POST | `/inventory/movements/count/` | `{ id, note, lines: [{ product, counted }] }`. A stock count (opname): each counted item is set to what is on the shelf and the difference is kept as a `count` movement. Items not listed are untouched. Idempotent by `id`. Audited. |
+
+Only tracked, active products can be received, wasted or counted.
+
 ### Shifts (`/shifts/`)
 
 One drawer, so one open shift at a time. Reading needs any of `open_shift`, `close_shift`, `take_payment` or `open_drawer`.
@@ -185,4 +203,4 @@ Escalation rules (both the API and the mock enforce them): nobody can grant a pe
 
 ## Planned (filled in milestone by milestone)
 
-Floor (areas, tables), catalog (categories, products, modifiers, recipes), inventory movements, print jobs, staff and roles, reports, audit log.
+Floor (areas, tables), catalog (categories, products, modifiers, recipes), print jobs, staff and roles, reports, audit log.

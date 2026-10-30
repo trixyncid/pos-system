@@ -142,3 +142,27 @@ test("the snack bar sells a scanned item for cash", async ({ page }) => {
   await page.getByRole("button", { name: /^Terima/ }).click()
   await expect(page.getByText("Pembayaran diterima")).toBeVisible()
 })
+
+test("a manager receives a delivery and counts stock", async ({ page }) => {
+  await page.goto("/login")
+  await page.getByRole("button", { name: "Manager" }).click()
+  await page.getByRole("button", { name: "Masuk" }).click()
+  // In-app navigation: a full reload locks the tablet again.
+  await page.getByRole("link", { name: "Back office" }).click()
+  await page.getByRole("link", { name: "Stok" }).click()
+  await expect(page.getByRole("heading", { name: "Stok" })).toBeVisible()
+
+  await page.getByRole("button", { name: "Terima barang" }).click()
+  const receive = page.getByRole("dialog", { name: "Terima barang" })
+  await receive.getByPlaceholder("Cari barang untuk ditambahkan").fill("telur")
+  await receive.getByRole("button", { name: /Telur/ }).click()
+  await receive.getByLabel("Jumlah").fill("30")
+  await receive.getByRole("button", { name: "Simpan 1 barang" }).click()
+  await expect(page.getByText("1 barang diterima")).toBeVisible()
+
+  await page.getByRole("button", { name: "Stock opname" }).click()
+  const count = page.getByRole("dialog", { name: "Stock opname" })
+  await count.getByLabel("Jumlah Telur di rak").fill("50")
+  await count.getByRole("button", { name: /^Simpan opname/ }).click()
+  await expect(page.getByText("1 dihitung, 1 disesuaikan")).toBeVisible()
+})
