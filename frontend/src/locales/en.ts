@@ -1,0 +1,68 @@
+import type { Messages } from "@/lib/i18n.ts"
+
+export const en: Messages = {
+  common: {
+    appName: "POS",
+    back: "Back",
+    cancel: "Cancel",
+    save: "Save",
+    loading: "Loading…",
+    retry: "Try again",
+    signOut: "Sign out",
+    comingSoon: "Coming soon",
+    comingSoonBody: "This screen is built in milestone {{milestone}}.",
+  },
+  auth: {
+    signInTitle: "Sign this tablet in",
+    signInBody:
+      "A manager or owner signs in once. Staff then unlock with their PIN.",
+    email: "Email",
+    password: "Password",
+    signIn: "Sign in",
+    signingIn: "Signing in…",
+    lockedTitle: "Who's on?",
+    lockedBody: "Pick your name, then enter your PIN.",
+    enterPin: "Enter PIN",
+    pinFor: "PIN for {{name}}",
+    changeStaff: "Change staff",
+    lock: "Lock",
+    noStaffWithPin:
+      "No staff have a PIN yet. Ask a manager to set one under Staff.",
+    deleteDigit: "Delete digit",
+    pinIncorrect: "Wrong PIN.",
+    pinLocked: "Too many wrong PINs. Ask a manager or try again later.",
+    pinUnavailable: "This staff member has no PIN yet.",
+    clearPin: "Clear",
+  },
+  nav: {
+    pos: "Register",
+    backOffice: "Back office",
+    floor: "Floor",
+    order: "Order",
+    snackbar: "Snack bar",
+    printStation: "Print station",
+    shifts: "Shifts",
+    dashboard: "Dashboard",
+    reports: "Reports",
+    menu: "Menu",
+    floorEditor: "Edit floor",
+    inventory: "Stock",
+    staff: "Staff",
+    roles: "Roles & access",
+    settings: "Settings",
+    audit: "Audit log",
+  },
+  section: {
+    service: "Service",
+    overview: "Overview",
+    catalog: "Catalog",
+    people: "People",
+    system: "System",
+  },
+  errors: {
+    forbiddenTitle: "No access",
+    forbiddenBody:
+      "Your role doesn't open this page. Ask the owner to add it under Roles & access.",
+    notFoundTitle: "Page not found",
+  },
+}

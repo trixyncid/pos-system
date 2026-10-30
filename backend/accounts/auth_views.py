@@ -164,3 +164,27 @@ class MeView(APIView):
     @extend_schema(responses=OpenApiTypes.OBJECT)
     def get(self, request):
         return ok(user_payload(request.user))
+
+
+class LockStaffView(APIView):
+    """
+    The staff tiles on a locked tablet: active users who have a PIN. Only
+    names and role names, never emails, so a passer-by learns nothing more
+    than the rota on the wall.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(responses=OpenApiTypes.OBJECT)
+    def get(self, request):
+        users = User.objects.filter(is_active=True).exclude(pin_hash="").prefetch_related("groups")
+        return ok(
+            [
+                {
+                    "id": user.pk,
+                    "full_name": user.full_name,
+                    "role": ", ".join(group.name for group in user.groups.all()),
+                }
+                for user in users
+            ]
+        )

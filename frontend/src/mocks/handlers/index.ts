@@ -1,3 +1,4 @@
+import { authHandlers } from "@/mocks/handlers/auth.ts"
 import { outletHandlers } from "@/mocks/handlers/outlet.ts"
 
-export const handlers = [...outletHandlers]
+export const handlers = [...authHandlers, ...outletHandlers]

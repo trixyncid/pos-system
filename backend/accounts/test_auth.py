@@ -12,6 +12,7 @@ REFRESH = "/api/v1/auth/refresh/"
 LOGOUT = "/api/v1/auth/logout/"
 ME = "/api/v1/auth/me/"
 PIN = "/api/v1/auth/pin-unlock/"
+LOCK_STAFF = "/api/v1/auth/lock-staff/"
 
 
 class AuthTests(TestCase):
@@ -111,3 +112,10 @@ class AuthTests(TestCase):
         self.cashier.refresh_from_db()
         self.assertNotIn("1234", self.cashier.pin_hash)
         self.assertTrue(self.cashier.pin_hash.startswith(("pbkdf2_", "argon2", "bcrypt", "scrypt")))
+
+    def test_lock_staff_lists_only_people_with_a_pin(self):
+        self.assertEqual(self.web.get(LOCK_STAFF).status_code, 401)
+        self.sign_in()
+        response = self.web.get(LOCK_STAFF)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["data"], [{"id": self.cashier.pk, "full_name": "Budi", "role": "Kasir"}])

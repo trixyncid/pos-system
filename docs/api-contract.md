@@ -31,6 +31,7 @@ The web app sends `X-Session-Cookie: 1`, so the refresh token lives in an httpOn
 | POST | `/auth/refresh/` | none (cookie) | `{ success, access }` and a rotated cookie |
 | POST | `/auth/logout/` | none (cookie) | `{ success }`, with the cookie cleared and the token blacklisted |
 | GET | `/auth/me/` | none | `{ success, data: user }` |
+| GET | `/auth/lock-staff/` | none (needs a signed-in tablet) | `{ success, data: [{ id, full_name, role }] }`: active staff who have a PIN, for the lock screen |
 
 `user`: `{ id, email, full_name, has_pin, is_superuser, roles: [{id, code, name}], permissions: ["accounts.take_order", ...] | ["*"] }`
 

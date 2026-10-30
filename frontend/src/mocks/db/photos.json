@@ -1,0 +1,476 @@
+[
+  {
+    "key": "air-mineral",
+    "group": "food",
+    "subject": "Air mineral",
+    "ext": "webp"
+  },
+  {
+    "key": "ayam-bakar",
+    "group": "food",
+    "subject": "Ayam bakar",
+    "ext": "webp"
+  },
+  {
+    "key": "ayam-geprek",
+    "group": "food",
+    "subject": "Ayam geprek",
+    "ext": "webp"
+  },
+  {
+    "key": "bakso",
+    "group": "food",
+    "subject": "Bakso",
+    "ext": "webp"
+  },
+  {
+    "key": "capcay",
+    "group": "food",
+    "subject": "Capcay",
+    "ext": "webp"
+  },
+  {
+    "key": "cumi-goreng-tepung",
+    "group": "food",
+    "subject": "Cumi goreng tepung",
+    "ext": "webp"
+  },
+  {
+    "key": "es-campur",
+    "group": "food",
+    "subject": "Es campur",
+    "ext": "webp"
+  },
+  {
+    "key": "es-cendol",
+    "group": "food",
+    "subject": "Es cendol",
+    "ext": "webp"
+  },
+  {
+    "key": "es-jeruk",
+    "group": "food",
+    "subject": "Es jeruk",
+    "ext": "webp"
+  },
+  {
+    "key": "es-kelapa-muda",
+    "group": "food",
+    "subject": "Es kelapa muda",
+    "ext": "webp"
+  },
+  {
+    "key": "es-teh-manis",
+    "group": "food",
+    "subject": "Es teh manis",
+    "ext": "webp"
+  },
+  {
+    "key": "gado-gado",
+    "group": "food",
+    "subject": "Gado-gado",
+    "ext": "webp"
+  },
+  {
+    "key": "gulai",
+    "group": "food",
+    "subject": "Gulai",
+    "ext": "webp"
+  },
+  {
+    "key": "ikan-bakar",
+    "group": "food",
+    "subject": "Ikan bakar",
+    "ext": "webp"
+  },
+  {
+    "key": "jus-alpukat",
+    "group": "food",
+    "subject": "Jus alpukat",
+    "ext": "webp"
+  },
+  {
+    "key": "klepon",
+    "group": "food",
+    "subject": "Klepon",
+    "ext": "webp"
+  },
+  {
+    "key": "kopi-hitam",
+    "group": "food",
+    "subject": "Kopi hitam",
+    "ext": "webp"
+  },
+  {
+    "key": "kopi-susu",
+    "group": "food",
+    "subject": "Kopi susu",
+    "ext": "webp"
+  },
+  {
+    "key": "lemon-tea",
+    "group": "food",
+    "subject": "Lemon tea",
+    "ext": "webp"
+  },
+  {
+    "key": "lumpia",
+    "group": "food",
+    "subject": "Lumpia",
+    "ext": "webp"
+  },
+  {
+    "key": "martabak",
+    "group": "food",
+    "subject": "Martabak manis",
+    "ext": "webp"
+  },
+  {
+    "key": "mie-ayam",
+    "group": "food",
+    "subject": "Mie ayam",
+    "ext": "webp"
+  },
+  {
+    "key": "mie-goreng",
+    "group": "food",
+    "subject": "Mie goreng",
+    "ext": "webp"
+  },
+  {
+    "key": "nasi-campur",
+    "group": "food",
+    "subject": "Nasi campur",
+    "ext": "webp"
+  },
+  {
+    "key": "nasi-goreng",
+    "group": "food",
+    "subject": "Nasi goreng",
+    "ext": "webp"
+  },
+  {
+    "key": "nasi-kuning",
+    "group": "food",
+    "subject": "Nasi kuning",
+    "ext": "webp"
+  },
+  {
+    "key": "nasi-padang",
+    "group": "food",
+    "subject": "Nasi padang",
+    "ext": "webp"
+  },
+  {
+    "key": "nasi-uduk",
+    "group": "food",
+    "subject": "Nasi uduk",
+    "ext": "webp"
+  },
+  {
+    "key": "pempek",
+    "group": "food",
+    "subject": "Pempek",
+    "ext": "webp"
+  },
+  {
+    "key": "pisang-goreng",
+    "group": "food",
+    "subject": "Pisang goreng",
+    "ext": "webp"
+  },
+  {
+    "key": "rawon",
+    "group": "food",
+    "subject": "Rawon",
+    "ext": "webp"
+  },
+  {
+    "key": "rendang",
+    "group": "food",
+    "subject": "Rendang",
+    "ext": "webp"
+  },
+  {
+    "key": "sate-ayam",
+    "group": "food",
+    "subject": "Sate ayam",
+    "ext": "webp"
+  },
+  {
+    "key": "sop-buntut",
+    "group": "food",
+    "subject": "Sop buntut",
+    "ext": "webp"
+  },
+  {
+    "key": "soto-ayam",
+    "group": "food",
+    "subject": "Soto ayam",
+    "ext": "webp"
+  },
+  {
+    "key": "tahu-goreng",
+    "group": "food",
+    "subject": "Tahu goreng",
+    "ext": "webp"
+  },
+  {
+    "key": "teh-tarik",
+    "group": "food",
+    "subject": "Teh tarik",
+    "ext": "webp"
+  },
+  {
+    "key": "tempe-goreng",
+    "group": "food",
+    "subject": "Tempe goreng",
+    "ext": "webp"
+  },
+  {
+    "key": "udang-bakar",
+    "group": "food",
+    "subject": "Udang bakar",
+    "ext": "webp"
+  },
+  {
+    "key": "wedang-jahe",
+    "group": "food",
+    "subject": "Wedang jahe",
+    "ext": "webp"
+  },
+  {
+    "key": "banana-chips",
+    "group": "snack",
+    "subject": "Keripik pisang",
+    "ext": "webp"
+  },
+  {
+    "key": "biscuits",
+    "group": "snack",
+    "subject": "Biskuit",
+    "ext": "webp"
+  },
+  {
+    "key": "bottled-tea",
+    "group": "snack",
+    "subject": "Teh botol",
+    "ext": "webp"
+  },
+  {
+    "key": "bottled-water",
+    "group": "snack",
+    "subject": "Air mineral botol",
+    "ext": "webp"
+  },
+  {
+    "key": "candy",
+    "group": "snack",
+    "subject": "Permen",
+    "ext": "webp"
+  },
+  {
+    "key": "canned-coffee",
+    "group": "snack",
+    "subject": "Kopi kaleng",
+    "ext": "webp"
+  },
+  {
+    "key": "cassava-chips",
+    "group": "snack",
+    "subject": "Keripik singkong",
+    "ext": "webp"
+  },
+  {
+    "key": "cereal-bar",
+    "group": "snack",
+    "subject": "Sereal bar",
+    "ext": "webp"
+  },
+  {
+    "key": "chewing-gum",
+    "group": "snack",
+    "subject": "Permen karet",
+    "ext": "webp"
+  },
+  {
+    "key": "chocolate-bar",
+    "group": "snack",
+    "subject": "Cokelat batang",
+    "ext": "webp"
+  },
+  {
+    "key": "chocolate-cookies",
+    "group": "snack",
+    "subject": "Cookies cokelat",
+    "ext": "webp"
+  },
+  {
+    "key": "coconut-water",
+    "group": "snack",
+    "subject": "Air kelapa",
+    "ext": "webp"
+  },
+  {
+    "key": "cookies",
+    "group": "snack",
+    "subject": "Cookies",
+    "ext": "webp"
+  },
+  {
+    "key": "crackers",
+    "group": "snack",
+    "subject": "Crackers",
+    "ext": "webp"
+  },
+  {
+    "key": "croissant",
+    "group": "snack",
+    "subject": "Croissant",
+    "ext": "webp"
+  },
+  {
+    "key": "donut",
+    "group": "snack",
+    "subject": "Donat",
+    "ext": "webp"
+  },
+  {
+    "key": "dried-fruit",
+    "group": "snack",
+    "subject": "Buah kering",
+    "ext": "webp"
+  },
+  {
+    "key": "energy-drink",
+    "group": "snack",
+    "subject": "Minuman energi",
+    "ext": "webp"
+  },
+  {
+    "key": "granola-bar",
+    "group": "snack",
+    "subject": "Granola bar",
+    "ext": "webp"
+  },
+  {
+    "key": "gummy-bears",
+    "group": "snack",
+    "subject": "Permen jeli",
+    "ext": "webp"
+  },
+  {
+    "key": "ice-cream-cone",
+    "group": "snack",
+    "subject": "Es krim cone",
+    "ext": "webp"
+  },
+  {
+    "key": "instant-noodles-cup",
+    "group": "snack",
+    "subject": "Mi instan cup",
+    "ext": "webp"
+  },
+  {
+    "key": "jelly-drink",
+    "group": "snack",
+    "subject": "Minuman jeli",
+    "ext": "webp"
+  },
+  {
+    "key": "juice-box",
+    "group": "snack",
+    "subject": "Jus kotak",
+    "ext": "webp"
+  },
+  {
+    "key": "lollipop",
+    "group": "snack",
+    "subject": "Lolipop",
+    "ext": "webp"
+  },
+  {
+    "key": "milk-bottle",
+    "group": "snack",
+    "subject": "Susu botol",
+    "ext": "webp"
+  },
+  {
+    "key": "mints",
+    "group": "snack",
+    "subject": "Permen mint",
+    "ext": "webp"
+  },
+  {
+    "key": "mixed-nuts",
+    "group": "snack",
+    "subject": "Kacang campur",
+    "ext": "webp"
+  },
+  {
+    "key": "peanuts",
+    "group": "snack",
+    "subject": "Kacang",
+    "ext": "webp"
+  },
+  {
+    "key": "popcorn",
+    "group": "snack",
+    "subject": "Popcorn",
+    "ext": "webp"
+  },
+  {
+    "key": "potato-chips",
+    "group": "snack",
+    "subject": "Keripik kentang",
+    "ext": "webp"
+  },
+  {
+    "key": "pretzels",
+    "group": "snack",
+    "subject": "Pretzel",
+    "ext": "webp"
+  },
+  {
+    "key": "rice-crackers",
+    "group": "snack",
+    "subject": "Kerupuk beras",
+    "ext": "webp"
+  },
+  {
+    "key": "sandwich",
+    "group": "snack",
+    "subject": "Sandwich",
+    "ext": "webp"
+  },
+  {
+    "key": "soda-can",
+    "group": "snack",
+    "subject": "Soda kaleng",
+    "ext": "webp"
+  },
+  {
+    "key": "sparkling-water",
+    "group": "snack",
+    "subject": "Air soda",
+    "ext": "webp"
+  },
+  {
+    "key": "tortilla-chips",
+    "group": "snack",
+    "subject": "Tortilla chips",
+    "ext": "webp"
+  },
+  {
+    "key": "wafer",
+    "group": "snack",
+    "subject": "Wafer",
+    "ext": "webp"
+  },
+  {
+    "key": "yogurt-drink",
+    "group": "snack",
+    "subject": "Yogurt minum",
+    "ext": "webp"
+  }
+]

@@ -8,6 +8,7 @@ import { router } from "@/app/router.tsx"
 import { ThemeProvider } from "@/components/theme-provider.tsx"
 import { Toaster } from "@/components/ui/sonner.tsx"
 import { env } from "@/lib/env.ts"
+import "@/lib/i18n.ts"
 import { queryClient } from "@/lib/query-client.ts"
 import "@/index.css"
 

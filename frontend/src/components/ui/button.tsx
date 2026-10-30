@@ -31,6 +31,11 @@ const buttonVariants = cva(
         "icon-sm":
           "size-7 rounded-[min(var(--radius-md),12px)] in-data-[slot=button-group]:rounded-lg",
         "icon-lg": "size-9",
+        // Touch sizes for the POS screens: 48px minimum, 56px for primary actions.
+        touch:
+          "h-12 gap-2 rounded-xl px-5 text-base [&_svg:not([class*='size-'])]:size-5",
+        xl: "h-14 gap-2.5 rounded-2xl px-6 text-lg font-semibold [&_svg:not([class*='size-'])]:size-6",
+        "icon-touch": "size-12 rounded-xl [&_svg:not([class*='size-'])]:size-5",
       },
     },
     defaultVariants: {

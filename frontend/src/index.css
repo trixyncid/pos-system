@@ -54,6 +54,15 @@
     --radius-2xl: calc(var(--radius) * 1.8);
     --radius-3xl: calc(var(--radius) * 2.2);
     --radius-4xl: calc(var(--radius) * 2.6);
+    /* Elevation: soft, warm-tinted, so cards lift off the canvas without grey haze. */
+    --shadow-soft: 0 1px 2px oklch(0.3 0.03 50 / 0.06), 0 2px 8px oklch(0.3 0.03 50 / 0.05);
+    --shadow-raised: 0 2px 4px oklch(0.3 0.03 50 / 0.06), 0 12px 32px -8px oklch(0.3 0.03 50 / 0.16);
+    --shadow-overlay: 0 24px 64px -12px oklch(0.2 0.03 50 / 0.3);
+    /* Motion. Springs live in src/lib/motion.ts; these are for CSS transitions. */
+    --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+    --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+    --animate-shake: shake 0.42s var(--ease-out) both;
+    --animate-flash: flash 0.9s var(--ease-out) both;
 }
 
 /* Warm neutrals with one terracotta accent. The full token set is designed in M1 (docs/design.md). */
@@ -215,10 +224,49 @@
   animation: sheet-up 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
+/* A wrong PIN or an unknown barcode: a short horizontal "no". */
+@keyframes shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20% {
+    transform: translateX(-10px);
+  }
+  40% {
+    transform: translateX(8px);
+  }
+  60% {
+    transform: translateX(-5px);
+  }
+  80% {
+    transform: translateX(3px);
+  }
+}
+
+/* A row that just changed (a scanned item, a re-added line) glows once in the accent. */
+@keyframes flash {
+  from {
+    background-color: color-mix(in oklch, var(--primary) 18%, transparent);
+  }
+  to {
+    background-color: transparent;
+  }
+}
+
+@utility pt-safe {
+  padding-top: env(safe-area-inset-top);
+}
+
+@utility pb-safe {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .rise-in,
   .pop-in,
-  .sheet-up {
+  .sheet-up,
+  .animate-shake {
     animation: none;
   }
 }
