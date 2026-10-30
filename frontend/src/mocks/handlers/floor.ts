@@ -4,6 +4,8 @@ import { perm } from "@/features/auth/lib/permissions.ts"
 import type { FloorTable, TableLayout } from "@/features/floor/schemas/floor.ts"
 import { mockId } from "@/mocks/db/catalog.ts"
 import { areas } from "@/mocks/db/floor.ts"
+import { withOccupancy } from "@/mocks/db/orders.ts"
+import { bus } from "@/realtime/bus.ts"
 import { permissionsOf } from "@/mocks/db/staff.ts"
 import { bearerStaff } from "@/mocks/handlers/auth.ts"
 import { apiPath, fail, ok } from "@/mocks/http.ts"
@@ -32,7 +34,11 @@ export const floorHandlers = [
     if (error) return error
     await delay()
     const all = new URL(request.url).searchParams.get("all") === "true"
-    return ok(sorted().filter((area) => all || area.is_active))
+    return ok(
+      sorted()
+        .filter((area) => all || area.is_active)
+        .map((area) => ({ ...area, tables: area.tables.map(withOccupancy) }))
+    )
   }),
 
   http.post(apiPath("/floor/areas/"), async ({ request }) => {
@@ -109,6 +115,16 @@ export const floorHandlers = [
       const message = `Already used in another area: ${taken.join(", ")}.`
       return fail(400, message, { errors: { tables: [message] } })
     }
+    const busy = area.tables
+      .filter((t) => !tables.some((layout) => layout.id === t.id))
+      .filter((t) => withOccupancy(t).order_id !== null)
+      .map((t) => t.label)
+    if (busy.length) {
+      return fail(
+        400,
+        `Guests are seated at ${busy.join(", ")}; close their orders before removing them.`
+      )
+    }
     area.tables = tables.map((layout): FloorTable => {
       const existing = area.tables.find((t) => t.id === layout.id)
       return {
@@ -119,6 +135,7 @@ export const floorHandlers = [
           guests: null,
           order_total: null,
           waiter: null,
+          order_id: null,
         }),
         id: layout.id ?? mockId(),
         label: layout.label.trim(),
@@ -144,14 +161,9 @@ export const floorHandlers = [
         .flatMap((a) => a.tables)
         .find((t) => t.id === params.id)
       if (!table) return fail(404, "Not found.")
-      Object.assign(table, {
-        status: "available",
-        seated_at: null,
-        guests: null,
-        order_total: null,
-        waiter: null,
-      })
-      return ok(table)
+      table.status = "available"
+      bus.emit("floor", { type: "floor.changed" })
+      return ok(withOccupancy(table))
     }
   ),
 ]

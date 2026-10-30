@@ -14,6 +14,15 @@ Any tablet ─POST send─▶ API ─PrintJob(s) routed category→printer─▶
 - A browser cannot open a raw TCP socket, and iPad Safari has no Bluetooth API. `window.print()` always shows a dialog, and most thermal printers don't support AirPrint.
 - A cloud API cannot reach a printer on the restaurant's LAN. The Print Station sits on that LAN and pulls jobs over the WebSocket the API already has.
 
+## Status (M5)
+
+- **Built:**
+  - Print jobs in the API, routed by station.
+  - The print station page, which auto-prints, acknowledges and offers retry, reprint and test pages.
+  - ESC/POS encoding (`frontend/src/features/printing/lib/ticket-doc.ts`) and the kitchen and cancellation ticket layouts (`tickets.ts`).
+  - `PreviewTransport`.
+- **Next:** `CapacitorTcpTransport` in the Android shell (M10).
+
 ## Pieces
 
 - `PrintTransport` (frontend, M5): `connect()`, `print(bytes)`, `status()`.

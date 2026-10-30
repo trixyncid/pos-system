@@ -87,6 +87,49 @@ Table: `{ id, label, shape: rect|round, x, y, width, height, rotation, capacity,
 - `status` is one of `available`, `occupied`, `ordered`, `billed` or `cleaning`. Until orders exist (M5), the API reports only `available` or `cleaning`, and the occupancy fields are null.
 - Every change publishes `{ type: "floor.changed" }` on the `floor` stream, so tablets can refetch.
 
+### Orders (`/orders/`, needs `accounts.take_order`)
+
+Order: `{ id, number, channel, type, table, table_label, guests, status: open|billed|paid|merged|void, waiter, note, subtotal, version, created_at, lines }`.
+
+Line: `{ id, product, name, unit_price, quantity, modifiers: [{group, name, price_delta}], note, seat, station, status: held|sent|void, total, added_by_name, sent_at, void_reason }`.
+
+Names, prices and choices are copied onto each line when it is ordered.
+
+| Method | Path | Notes |
+|---|---|---|
+| GET | `/orders/?table=` | Orders still holding a table (open or billed) |
+| GET | `/orders/{id}/` | |
+| POST | `/orders/` | `{ id (client UUID), table, guests, type, channel }`. Idempotent by `id`; one open order per table |
+| POST | `/orders/{id}/lines/` | `{ lines: [{ id, product, quantity, modifiers: [option ids], note, seat }], send }`. Choices are checked against the product's groups (min/max); sold-out and archived items are refused; retried line ids are skipped. `send=true` queues tickets |
+| POST | `/orders/{id}/send/` | `{ line_ids? }` sends held lines |
+| PATCH | `/orders/{id}/lines/{line}/` | `{ quantity?, note?, seat? }`, held lines only |
+| POST | `/orders/{id}/lines/{line}/void/` | `{ reason, approver?, approver_pin? }`. A held line is removed. A sent line needs a reason and either `accounts.void_sent_item` or an approver holding `accounts.approve_override` plus that person's PIN. Codes: `approval_required`, `approval_rejected`. A cancellation ticket prints, and the void is audited with the amount and approver |
+| POST | `/orders/{id}/move/` | `{ table }`, which must be free; the old table is flagged for cleaning |
+| POST | `/orders/{id}/merge/` | `{ source }`. The source's lines and guests join this order; the source becomes `merged` |
+| POST | `/orders/{id}/guests/` | `{ guests }` |
+| POST | `/orders/{id}/cancel/` | Only when nothing has been sent |
+| GET | `/auth/approvers/` | Active staff with a PIN and `approve_override`, for the approval dialog |
+
+Every change publishes `order.changed` on `orders` and `floor.changed` on `floor`. The floor's table status comes from the open order:
+- `occupied` when nothing is sent yet
+- `ordered` once anything is sent
+- `billed` once the bill is printed (M6)
+
+### Printing (`/printing/jobs/`)
+
+| Method | Path | Permission | Notes |
+|---|---|---|---|
+| GET | `/printing/jobs/?status=&station=` | `print_station` | Last 100, oldest first |
+| POST | `/printing/jobs/{id}/ack/` | `print_station` | `{ status: printed\|failed, error }` |
+| POST | `/printing/jobs/{id}/reprint/` | `reprint` | A copy marked `reprint: true`, audited |
+| POST | `/printing/jobs/test/` | `print_station` | `{ station }` |
+
+Job: `{ id, station, kind: kitchen|void|bill|receipt|test, status, payload, attempts, error, created_at, printed_at }`.
+
+- The payload holds everything the ticket shows (label, number, by, time, lines with choices, note, seat and void reason), so the station never looks anything up.
+- One job is queued per station (`kitchen`, `bar`); lines whose category prints nowhere (`none`, the snack bar) get no job.
+- New jobs publish `print.job` on the `print` stream.
+
 Escalation rules (both the API and the mock enforce them): nobody can grant a permission or give a role that does more than they can themselves, edit or reset the PIN of someone who can do more than them, deactivate themselves, change their own roles, or remove their own access to staff and roles.
 
 ## Realtime

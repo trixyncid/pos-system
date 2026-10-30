@@ -8,8 +8,8 @@ from floor.models import Area, Table
 
 class TableSerializer(serializers.ModelSerializer):
     """
-    A table and its live state. Until orders exist (M5) a table is either
-    "available" or "cleaning"; the occupancy fields stay null.
+    A table and its live state. Occupancy comes from the table's open order,
+    which the view looks up once for the whole floor (context["occupancy"]).
     """
 
     id = serializers.UUIDField(required=False)
@@ -18,6 +18,7 @@ class TableSerializer(serializers.ModelSerializer):
     guests = serializers.SerializerMethodField()
     order_total = serializers.SerializerMethodField()
     waiter = serializers.SerializerMethodField()
+    order_id = serializers.SerializerMethodField()
 
     class Meta:
         model = Table
@@ -36,23 +37,38 @@ class TableSerializer(serializers.ModelSerializer):
             "guests",
             "order_total",
             "waiter",
+            "order_id",
         )
         extra_kwargs = {"label": {"validators": []}}
 
+    def _occupancy(self, table) -> dict | None:
+        return self.context.get("occupancy", {}).get(table.pk)
+
     def get_status(self, table) -> str:
+        occupancy = self._occupancy(table)
+        if occupancy is not None:
+            return occupancy["status"]
         return "cleaning" if table.needs_cleaning else "available"
 
     def get_seated_at(self, table) -> str | None:
-        return None
+        occupancy = self._occupancy(table)
+        return occupancy["seated_at"] if occupancy else None
 
     def get_guests(self, table) -> int | None:
-        return None
+        occupancy = self._occupancy(table)
+        return occupancy["guests"] if occupancy else None
 
     def get_order_total(self, table) -> int | None:
-        return None
+        occupancy = self._occupancy(table)
+        return occupancy["order_total"] if occupancy else None
 
     def get_waiter(self, table) -> str | None:
-        return None
+        occupancy = self._occupancy(table)
+        return occupancy["waiter"] if occupancy else None
+
+    def get_order_id(self, table) -> str | None:
+        occupancy = self._occupancy(table)
+        return occupancy["order_id"] if occupancy else None
 
 
 class AreaSerializer(serializers.ModelSerializer):
@@ -92,6 +108,15 @@ class LayoutSerializer(serializers.Serializer):
         foreign = Table.objects.filter(pk__in=ids).exclude(area=area)
         if foreign.exists():
             raise serializers.ValidationError("A table from another area cannot be saved here.")
+        from orders.models import SEATED
+
+        removed_busy = (
+            area.tables.exclude(pk__in=ids).filter(orders__status__in=SEATED).values_list("label", flat=True).distinct()
+        )
+        if removed_busy:
+            raise serializers.ValidationError(
+                f"Guests are seated at {', '.join(sorted(removed_busy))}; close their orders before removing them."
+            )
         return tables
 
     @transaction.atomic
@@ -121,3 +146,33 @@ def _temporary_labels():
     its random part), used while labels are being reassigned.
     """
     return Concat(Value("~"), Right(Cast(F("id"), CharField()), 11))
+
+
+def floor_occupancy(tables) -> dict:
+    """{table_id: live state} from the open orders on these tables, in three queries."""
+    from orders.models import SEATED, LineStatus, Order, OrderStatus, order_subtotals
+
+    orders = list(Order.objects.filter(table__in=tables, status__in=SEATED).select_related("opened_by"))
+    totals = order_subtotals(orders)
+    sent = set(
+        Order.objects.filter(pk__in=[order.pk for order in orders], lines__status=LineStatus.SENT).values_list(
+            "pk", flat=True
+        )
+    )
+    occupancy = {}
+    for order in orders:
+        if order.status == OrderStatus.BILLED:
+            status = "billed"
+        elif order.pk in sent:
+            status = "ordered"
+        else:
+            status = "occupied"
+        occupancy[order.table_id] = {
+            "status": status,
+            "seated_at": order.created_at.isoformat(),
+            "guests": order.guests,
+            "order_total": totals.get(order.pk, 0),
+            "waiter": order.opened_by.full_name,
+            "order_id": str(order.pk),
+        }
+    return occupancy

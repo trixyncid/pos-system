@@ -64,3 +64,30 @@ test("owner adds a PIN-only waiter who can then unlock the tablet", async ({
     await lock.getByRole("button", { name: digit, exact: true }).click()
   await expect(page).toHaveURL(/\/floor$/)
 })
+
+test("a waiter seats a table, orders with choices and sends to the kitchen", async ({
+  page,
+}) => {
+  await page.goto("/login")
+  await page.getByRole("button", { name: "Manager" }).click()
+  await page.getByRole("button", { name: "Masuk" }).click()
+  await expect(page).toHaveURL(/\/floor$/)
+
+  await page.getByRole("button", { name: /^Meja 3,/ }).click()
+  await page.getByRole("radio", { name: "4", exact: true }).click()
+  await page.getByRole("button", { name: "Buka pesanan" }).click()
+  await expect(page).toHaveURL(/\/order\//)
+
+  await page.getByRole("button", { name: "Ayam Geprek" }).click()
+  await page.getByRole("button", { name: /^Tambah ·/ }).click()
+  // The spice level is required: the dialog stays open until it is picked.
+  await page.getByRole("radio", { name: /Extra pedas/ }).click()
+  await page.getByRole("button", { name: /^Tambah ·/ }).click()
+  await page.getByRole("button", { name: /Kirim ke dapur \(1\)/ }).click()
+  await expect(page.getByText("1 item terkirim ke dapur")).toBeVisible()
+
+  await page.getByRole("link", { name: "Denah" }).first().click()
+  await expect(
+    page.getByRole("button", { name: "Meja 3, Dipesan" })
+  ).toBeVisible()
+})

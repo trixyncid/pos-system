@@ -28,7 +28,7 @@ function Key({
       className={cn(
         "grid h-16 place-items-center rounded-2xl font-heading text-2xl font-medium tabular-nums transition-colors outline-none select-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-40",
         tone === "default"
-          ? "bg-card shadow-(--shadow-soft) active:bg-accent"
+          ? "bg-secondary shadow-(--shadow-soft) active:bg-accent"
           : "text-muted-foreground active:bg-muted"
       )}
     >

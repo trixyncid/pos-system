@@ -1,0 +1,350 @@
+import { CheckIcon, PauseIcon, SendIcon, ShoppingBagIcon } from "lucide-react"
+import { AnimatePresence, motion } from "motion/react"
+import { useEffect, useState, type ReactNode } from "react"
+import { useTranslation } from "react-i18next"
+
+import { MoneyText } from "@/components/pos/money-text.tsx"
+import { Button } from "@/components/ui/button.tsx"
+import { Spinner } from "@/components/ui/spinner.tsx"
+import { CartLine } from "@/features/ordering/components/cart-line.tsx"
+import { useLanded } from "@/features/ordering/components/fly-to-cart.tsx"
+import type {
+  DraftLine,
+  Order,
+  OrderLine,
+} from "@/features/ordering/schemas/order.ts"
+import { useOutletQuery } from "@/features/outlet/hooks/use-outlet.ts"
+import { CountUp } from "@/components/motion/count-up.tsx"
+import { billTotals, formatIDR } from "@/lib/money.ts"
+import { spring } from "@/lib/motion.ts"
+import { cn } from "@/lib/utils.ts"
+
+function Section({
+  title,
+  action,
+  children,
+}: {
+  title: string
+  action?: ReactNode
+  children: ReactNode
+}) {
+  return (
+    <div className="space-y-2">
+      <div className="flex h-8 items-center justify-between px-1">
+        <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+          {title}
+        </p>
+        {action}
+      </div>
+      <ul className="space-y-2">
+        <AnimatePresence initial={false}>{children}</AnimatePresence>
+      </ul>
+    </div>
+  )
+}
+
+function TotalRow({
+  label,
+  amount,
+  strong = false,
+  signed = false,
+}: {
+  label: string
+  amount: number
+  strong?: boolean
+  /** Rounding can go either way, so it always shows its sign. */
+  signed?: boolean
+}) {
+  return (
+    <div
+      className={cn(
+        "flex justify-between",
+        strong
+          ? "font-heading text-xl font-semibold"
+          : "text-sm text-muted-foreground"
+      )}
+    >
+      <span>{label}</span>
+      {signed ? (
+        <CountUp
+          value={amount}
+          format={(n) =>
+            `${n > 0 ? "+" : n < 0 ? "−" : ""}${formatIDR(Math.abs(Math.round(n)))}`
+          }
+          className="tabular-nums"
+        />
+      ) : (
+        <MoneyText amount={amount} animate />
+      )}
+    </div>
+  )
+}
+
+/**
+ * The right-hand cart: new lines (only on this tablet), held lines, and what
+ * the kitchen already has. Totals follow the outlet's service, PBJT and
+ * rounding rules as lines change.
+ */
+export function CartPanel({
+  order,
+  drafts,
+  sending,
+  onEditDraft,
+  onRemoveDraft,
+  onToggleHold,
+  onVoid,
+  onSend,
+  onSendHeld,
+}: {
+  order: Order
+  drafts: DraftLine[]
+  sending: boolean
+  onEditDraft: (line: DraftLine) => void
+  onRemoveDraft: (line: DraftLine) => void
+  onToggleHold: (line: DraftLine) => void
+  onVoid: (line: OrderLine) => void
+  onSend: () => Promise<boolean>
+  onSendHeld: () => void
+}) {
+  const { t } = useTranslation()
+  const outlet = useOutletQuery()
+  const landed = useLanded()
+  const [justSent, setJustSent] = useState(false)
+
+  useEffect(() => {
+    if (!justSent) return
+    const timer = window.setTimeout(() => setJustSent(false), 1600)
+    return () => window.clearTimeout(timer)
+  }, [justSent])
+
+  const held = order.lines.filter((line) => line.status === "held")
+  const sent = order.lines.filter((line) => line.status === "sent")
+  const voided = order.lines.filter((line) => line.status === "void")
+  const draftCount = drafts.reduce((sum, line) => sum + line.quantity, 0)
+  const toSend = drafts
+    .filter((line) => !line.hold)
+    .reduce((sum, line) => sum + line.quantity, 0)
+
+  const subtotal =
+    order.subtotal +
+    drafts.reduce((sum, line) => sum + line.unit_price * line.quantity, 0)
+  const rules = outlet.data
+    ? {
+        servicePercent: outlet.data.service_percent,
+        pbjtPercent: outlet.data.pbjt_percent,
+        taxBase: outlet.data.tax_base,
+        rounding: outlet.data.cash_rounding,
+      }
+    : {
+        servicePercent: 0,
+        pbjtPercent: 0,
+        taxBase: "subtotal" as const,
+        rounding: 1,
+      }
+  const bill = billTotals(subtotal, 0, rules)
+  const empty = drafts.length + order.lines.length === 0
+
+  return (
+    <aside className="flex min-h-0 flex-col border-l bg-background/60">
+      <div
+        className="flex h-14 shrink-0 items-center justify-between px-4"
+        data-cart-target
+      >
+        <p className="font-heading text-lg font-semibold">{t("order.cart")}</p>
+        <motion.span
+          key={landed}
+          initial={{ scale: 1.35 }}
+          animate={{ scale: 1 }}
+          transition={spring.pop}
+          className="grid h-8 min-w-8 place-items-center rounded-full bg-primary px-2 text-sm font-semibold text-primary-foreground tabular-nums"
+        >
+          {draftCount +
+            order.lines
+              .filter((l) => l.status !== "void")
+              .reduce((s, l) => s + l.quantity, 0)}
+        </motion.span>
+      </div>
+
+      <div className="min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain px-3 pb-4">
+        {empty && (
+          <div className="grid h-full place-items-center text-center text-muted-foreground">
+            <div className="space-y-3">
+              <ShoppingBagIcon className="mx-auto size-10 opacity-40" />
+              <p className="max-w-48 text-sm">{t("order.cartEmpty")}</p>
+            </div>
+          </div>
+        )}
+        {drafts.length > 0 && (
+          <Section title={t("order.newLines")}>
+            {drafts.map((line) => (
+              <CartLine
+                key={line.id}
+                quantity={line.quantity}
+                name={line.name}
+                modifiers={line.modifiers.map((m) => m.name)}
+                note={line.note}
+                seat={line.seat}
+                total={line.unit_price * line.quantity}
+                held={line.hold}
+                onTap={() => onEditDraft(line)}
+                onSwipe={() => onRemoveDraft(line)}
+                swipeLabel={t("order.swipeRemove")}
+                trailing={
+                  <button
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      onToggleHold(line)
+                    }}
+                    className={cn(
+                      "inline-flex h-7 items-center gap-1 rounded-full px-2.5 text-xs font-medium",
+                      line.hold
+                        ? "bg-warning/15 text-warning-ink"
+                        : "bg-muted text-muted-foreground"
+                    )}
+                  >
+                    <PauseIcon className="size-3" />
+                    {line.hold ? t("order.held") : t("order.hold")}
+                  </button>
+                }
+              />
+            ))}
+          </Section>
+        )}
+        {held.length > 0 && (
+          <Section
+            title={t("order.heldLines")}
+            action={
+              <Button size="sm" variant="secondary" onClick={onSendHeld}>
+                <SendIcon />
+                {t("order.sendHeldShort")}
+              </Button>
+            }
+          >
+            {held.map((line) => (
+              <CartLine
+                key={line.id}
+                quantity={line.quantity}
+                name={line.name}
+                modifiers={line.modifiers.map((m) => m.name)}
+                note={line.note}
+                seat={line.seat}
+                total={line.total}
+                tone="sent"
+                held
+                onSwipe={() => onVoid(line)}
+                swipeLabel={t("order.swipeRemove")}
+              />
+            ))}
+          </Section>
+        )}
+        {sent.length > 0 && (
+          <Section title={t("order.sentLines")}>
+            {sent.map((line) => (
+              <CartLine
+                key={line.id}
+                quantity={line.quantity}
+                name={line.name}
+                modifiers={line.modifiers.map((m) => m.name)}
+                note={line.note}
+                seat={line.seat}
+                total={line.total}
+                tone="sent"
+                onSwipe={() => onVoid(line)}
+                swipeLabel={t("order.swipeVoid")}
+              />
+            ))}
+          </Section>
+        )}
+        {voided.length > 0 && (
+          <Section title={t("order.voidLines")}>
+            {voided.map((line) => (
+              <CartLine
+                key={line.id}
+                quantity={line.quantity}
+                name={line.name}
+                modifiers={line.modifiers.map((m) => m.name)}
+                note={line.void_reason}
+                seat={line.seat}
+                total={line.total}
+                tone="void"
+              />
+            ))}
+          </Section>
+        )}
+      </div>
+
+      <div className="shrink-0 space-y-3 border-t bg-card/90 p-4 backdrop-blur">
+        <div className="space-y-1">
+          <TotalRow label={t("order.subtotal")} amount={bill.subtotal} />
+          {bill.service > 0 && (
+            <TotalRow
+              label={t("order.service", { percent: rules.servicePercent })}
+              amount={bill.service}
+            />
+          )}
+          {bill.tax > 0 && (
+            <TotalRow
+              label={t("order.tax", { percent: rules.pbjtPercent })}
+              amount={bill.tax}
+            />
+          )}
+          {bill.rounding !== 0 && (
+            <TotalRow
+              label={t("order.rounding")}
+              amount={bill.rounding}
+              signed
+            />
+          )}
+          <TotalRow label={t("order.total")} amount={bill.total} strong />
+        </div>
+        <Button
+          size="xl"
+          className={cn(
+            "w-full transition-colors",
+            justSent && "bg-success hover:bg-success"
+          )}
+          disabled={sending || (drafts.length === 0 && !justSent)}
+          onClick={async () => {
+            if (await onSend()) setJustSent(true)
+          }}
+        >
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.span
+              key={justSent ? "sent" : sending ? "sending" : "send"}
+              initial={{ y: 14, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: -14, opacity: 0 }}
+              transition={{ duration: 0.16 }}
+              className="flex items-center gap-2"
+            >
+              {justSent ? (
+                <>
+                  <CheckIcon />
+                  {t("order.sent")}
+                </>
+              ) : sending ? (
+                <Spinner />
+              ) : toSend > 0 ? (
+                <>
+                  <SendIcon />
+                  {t("order.sendCount", { count: toSend })}
+                </>
+              ) : drafts.length > 0 ? (
+                <>
+                  <PauseIcon />
+                  {t("order.saveHeld", { count: draftCount })}
+                </>
+              ) : (
+                <>
+                  <SendIcon />
+                  {t("order.send")}
+                </>
+              )}
+            </motion.span>
+          </AnimatePresence>
+        </Button>
+      </div>
+    </aside>
+  )
+}

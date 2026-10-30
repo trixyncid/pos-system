@@ -21,7 +21,10 @@ export function canAccessPath(user: User | null | undefined, pathname: string) {
 
 export function visiblePages(user: User | null | undefined, shell?: Shell) {
   return pages.filter(
-    (page) => (!shell || page.shell === shell) && canOpenPage(user, page)
+    (page) =>
+      !page.hidden &&
+      (!shell || page.shell === shell) &&
+      canOpenPage(user, page)
   )
 }
 

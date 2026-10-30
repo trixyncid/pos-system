@@ -1,3 +1,4 @@
+import { useNavigate } from "@tanstack/react-router"
 import { motion } from "motion/react"
 import { useState } from "react"
 import { useTranslation } from "react-i18next"
@@ -8,7 +9,8 @@ import { useAreasQuery } from "@/features/floor/api/floor.ts"
 import { LiveTable } from "@/features/floor/components/live-table.tsx"
 import { TableSheet } from "@/features/floor/components/table-sheet.tsx"
 import { statusOrder, statusStyle } from "@/features/floor/lib/status.ts"
-import { CANVAS } from "@/features/floor/schemas/floor.ts"
+import { CANVAS, type FloorTable } from "@/features/floor/schemas/floor.ts"
+import { OpenTableSheet } from "@/features/ordering/components/open-table-sheet.tsx"
 import { apiErrorMessage } from "@/lib/api-error.ts"
 import { spring } from "@/lib/motion.ts"
 import { useNow } from "@/lib/use-now.ts"
@@ -26,6 +28,19 @@ export function FloorPage() {
   const now = useNow(30_000)
   const [areaId, setAreaId] = useState<string | null>(null)
   const [tableId, setTableId] = useState<string | null>(null)
+  const [opening, setOpening] = useState<FloorTable | null>(null)
+  const navigate = useNavigate()
+
+  // Busy tables go straight to their order; free ones ask for the guest count.
+  const tap = (table: FloorTable) => {
+    if (table.order_id)
+      void navigate({
+        to: "/order/$orderId",
+        params: { orderId: table.order_id },
+      })
+    else if (table.status === "cleaning") setTableId(table.id)
+    else setOpening(table)
+  }
 
   if (areas.isPending)
     return (
@@ -129,7 +144,7 @@ export function FloorPage() {
                 key={item.id}
                 table={item}
                 now={now}
-                onOpen={() => setTableId(item.id)}
+                onOpen={() => tap(item)}
               />
             ))
           )}
@@ -140,7 +155,12 @@ export function FloorPage() {
         table={table}
         areaName={area.name}
         onClose={() => setTableId(null)}
+        onOpenOrder={(item) => {
+          setTableId(null)
+          setOpening(item)
+        }}
       />
+      <OpenTableSheet table={opening} onClose={() => setOpening(null)} />
     </div>
   )
 }

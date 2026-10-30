@@ -12,40 +12,8 @@ type Seed = [
   rotation?: number,
 ]
 
-/** Live state for some tables, so the floor view has something to show. Minutes are "seated this long ago". */
-const occupancy: Record<string, Partial<FloorTable> & { minutes?: number }> = {
-  "2": {
-    status: "ordered",
-    minutes: 34,
-    guests: 2,
-    order_total: 86_000,
-    waiter: "Sari",
-  },
-  "5": {
-    status: "ordered",
-    minutes: 61,
-    guests: 4,
-    order_total: 214_500,
-    waiter: "Agus",
-  },
-  "6": { status: "occupied", minutes: 4, guests: 3, waiter: "Sari" },
-  "8": {
-    status: "billed",
-    minutes: 78,
-    guests: 7,
-    order_total: 512_000,
-    waiter: "Agus",
-  },
-  "10": { status: "cleaning" },
-  "12": {
-    status: "ordered",
-    minutes: 18,
-    guests: 4,
-    order_total: 142_000,
-    waiter: "Sari",
-  },
-  "15": { status: "occupied", minutes: 9, guests: 2, waiter: "Agus" },
-}
+/** Only the cleaning flag is stored on a table; occupancy comes from the mock orders (db/orders.ts). */
+const needsCleaning = new Set(["10"])
 
 function table([
   label,
@@ -57,8 +25,6 @@ function table([
   capacity,
   rotation = 0,
 ]: Seed): FloorTable {
-  const live = occupancy[label] ?? {}
-  const { minutes, ...state } = live
   return {
     id: mockId(),
     label,
@@ -69,15 +35,12 @@ function table([
     height,
     rotation,
     capacity,
-    status: "available",
-    seated_at:
-      minutes === undefined
-        ? null
-        : new Date(Date.now() - minutes * 60_000).toISOString(),
+    status: needsCleaning.has(label) ? "cleaning" : "available",
+    seated_at: null,
     guests: null,
     order_total: null,
     waiter: null,
-    ...state,
+    order_id: null,
   }
 }
 

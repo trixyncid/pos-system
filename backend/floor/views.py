@@ -13,7 +13,7 @@ from audit.services import emit
 from common.permissions import RequirePermission
 from common.responses import ok
 from floor.models import Area, Table
-from floor.serializers import AreaSerializer, LayoutSerializer, TableSerializer
+from floor.serializers import AreaSerializer, LayoutSerializer, TableSerializer, floor_occupancy
 from realtime.broadcast import publish
 
 
@@ -40,6 +40,11 @@ class AreaViewSet(viewsets.ModelViewSet):
         if self.request.method in SAFE_METHODS and self.request.query_params.get("all") != "true":
             areas = areas.filter(is_active=True)
         return areas
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context["occupancy"] = floor_occupancy(Table.objects.all())
+        return context
 
     def list(self, request, *args, **kwargs):
         return ok(self.get_serializer(self.get_queryset(), many=True).data)

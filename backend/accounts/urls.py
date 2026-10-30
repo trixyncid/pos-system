@@ -11,4 +11,5 @@ urlpatterns = [
     path("logout/", auth_views.LogoutView.as_view(), name="logout"),
     path("me/", auth_views.MeView.as_view(), name="me"),
     path("lock-staff/", auth_views.LockStaffView.as_view(), name="lock-staff"),
+    path("approvers/", auth_views.ApproversView.as_view(), name="approvers"),
 ]

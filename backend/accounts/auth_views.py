@@ -188,3 +188,15 @@ class LockStaffView(APIView):
                 for user in users
             ]
         )
+
+
+class ApproversView(APIView):
+    """Staff who can approve a void or discount with their PIN, for the approval dialog."""
+
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(responses=OpenApiTypes.OBJECT)
+    def get(self, request):
+        users = User.objects.filter(is_active=True).exclude(pin_hash="").prefetch_related("groups")
+        approvers = [user for user in users if user.has_perm("accounts.approve_override")]
+        return ok([{"id": user.pk, "full_name": user.full_name} for user in approvers])

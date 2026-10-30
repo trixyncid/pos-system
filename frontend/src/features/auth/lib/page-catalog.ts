@@ -21,6 +21,7 @@ export type Shell = "pos" | "admin"
 export type Section = "service" | "overview" | "catalog" | "people" | "system"
 
 type NavKey =
+  | "order"
   | "floor"
   | "snackbar"
   | "shifts"
@@ -45,6 +46,8 @@ export type Page = {
   anyOf: readonly string[]
   /** Milestone that builds the real screen, shown on its placeholder. */
   milestone: string
+  /** Reached from another screen (the order screen from a table), never from the nav. */
+  hidden?: boolean
 }
 
 /**
@@ -52,6 +55,16 @@ export type Page = {
  * role editor all read it, so a page and its permission are declared once.
  */
 export const pages: readonly Page[] = [
+  {
+    key: "order",
+    path: "/order",
+    shell: "pos",
+    section: "service",
+    icon: LayoutGridIcon,
+    anyOf: [perm.takeOrder],
+    milestone: "M5",
+    hidden: true,
+  },
   {
     key: "floor",
     path: "/floor",

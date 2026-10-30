@@ -27,6 +27,8 @@ export const tableSchema = z.object({
   guests: z.number().nullable(),
   order_total: z.number().nullable(),
   waiter: z.string().nullable(),
+  /** The open order holding this table, if any. */
+  order_id: z.uuid().nullable(),
 })
 export type FloorTable = z.infer<typeof tableSchema>
 

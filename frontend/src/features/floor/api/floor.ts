@@ -14,8 +14,8 @@ export const floorKeys = {
 }
 
 /**
- * The live floor. Until the WebSocket client lands (M5), tablets refresh it
- * every 15 seconds; afterwards a "floor" event triggers the refetch instead.
+ * The live floor. "floor" events from other tablets refetch it at once
+ * (realtime/use-realtime.ts); the slow interval only covers a dropped socket.
  */
 export function useAreasQuery({ includeInactive = false, live = false } = {}) {
   return useQuery({
@@ -27,7 +27,7 @@ export function useAreasQuery({ includeInactive = false, live = false } = {}) {
       })
       return z.array(areaSchema).parse(data.data)
     },
-    refetchInterval: live ? 15_000 : false,
+    refetchInterval: live ? 60_000 : false,
   })
 }
 

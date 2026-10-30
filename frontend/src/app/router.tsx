@@ -109,9 +109,9 @@ const adminIndexRoute = createRoute({
 
 /** Screens that are built; every other catalog page shows its placeholder until its milestone. */
 const builtPages: Partial<Record<Page["key"], RouteComponent>> = {
-  floor: lazyRouteComponent(
-    () => import("@/features/floor/pages/floor-page.tsx"),
-    "FloorPage"
+  printStation: lazyRouteComponent(
+    () => import("@/features/printing/pages/print-station-page.tsx"),
+    "PrintStationPage"
   ),
   floorEditor: lazyRouteComponent(
     () => import("@/features/floor/pages/floor-editor-page.tsx"),
@@ -145,7 +145,31 @@ function pageRoute(page: Page) {
   })
 }
 
-const posPages = pages.filter((page) => page.shell === "pos").map(pageRoute)
+// The floor and the order screen are linked to by name, so they are declared
+// explicitly to keep their paths typed; other catalog pages come from the loop.
+const floorRoute = createRoute({
+  getParentRoute: () => posRoute,
+  path: "/floor",
+  component: lazyRouteComponent(
+    () => import("@/features/floor/pages/floor-page.tsx"),
+    "FloorPage"
+  ),
+})
+
+const orderRoute = createRoute({
+  getParentRoute: () => posRoute,
+  path: "/order/$orderId",
+  component: lazyRouteComponent(
+    () => import("@/features/ordering/pages/order-page.tsx"),
+    "OrderPage"
+  ),
+})
+
+const explicitPages = new Set<Page["key"]>(["floor", "order"])
+
+const posPages = pages
+  .filter((page) => page.shell === "pos" && !explicitPages.has(page.key))
+  .map(pageRoute)
 const adminPages = pages.filter((page) => page.shell === "admin").map(pageRoute)
 
 // Development only: the design kit at /kit, outside the sign-in guard.
@@ -167,7 +191,7 @@ const routeTree = rootRoute.addChildren([
   appRoute.addChildren([
     indexRoute,
     forbiddenRoute,
-    posRoute.addChildren(posPages),
+    posRoute.addChildren([floorRoute, orderRoute, ...posPages]),
     adminRoute.addChildren([adminIndexRoute, ...adminPages]),
   ]),
 ])
