@@ -1,0 +1,98 @@
+# Production API, Postgres, Redis and Caddy for a 2 vCPU / 4 GB VPS.
+# Caddy owns ports 80/443 and the TLS certificate; do not run nginx or certbot on the host.
+# The React app is hosted separately (Vercel). The Android print station connects to the
+# same API over WebSocket, so nothing runs on the restaurant's network except the printer.
+# Usage: docker compose --env-file .env -f docker-compose.prod.yml up -d
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.prod
+    image: ${APP_IMAGE:-pos-backend:latest}
+    container_name: pos-backend
+    env_file:
+      - .env
+    environment:
+      - DEBUG=0
+      - DATABASE_URL=postgres://${SQL_USER:-postgres}:${SQL_PASSWORD:?Set SQL_PASSWORD in .env}@db:5432/${SQL_DATABASE:-pos}
+      - REDIS_URL=redis://redis:6379/0
+    volumes:
+      - media_volume:/app/media
+      - static_volume:/app/staticfiles
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    mem_limit: 1536m
+    cpus: 1.5
+    restart: unless-stopped
+
+  db:
+    image: postgres:17-alpine
+    command:
+      - postgres
+      - -c
+      - shared_buffers=128MB
+      - -c
+      - max_connections=40
+      - -c
+      - work_mem=4MB
+      - -c
+      - effective_cache_size=512MB
+    environment:
+      POSTGRES_DB: ${SQL_DATABASE:-pos}
+      POSTGRES_USER: ${SQL_USER:-postgres}
+      POSTGRES_PASSWORD: ${SQL_PASSWORD:?Set SQL_PASSWORD in .env}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${SQL_USER:-postgres} -d ${SQL_DATABASE:-pos}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    mem_limit: 768m
+    cpus: 0.5
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "no", "--maxmemory", "96mb", "--maxmemory-policy", "allkeys-lru"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    mem_limit: 128m
+    cpus: 0.25
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN:?Set DOMAIN in .env}
+      ACME_EMAIL: ${ACME_EMAIL:?Set ACME_EMAIL in .env}
+    volumes:
+      # The directory, not the file: git pull replaces the Caddyfile, and a
+      # single-file mount would keep serving the old one.
+      - ./caddy:/etc/caddy:ro
+      - static_volume:/srv/static:ro
+      - media_volume:/srv/media:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - api
+    mem_limit: 128m
+    cpus: 0.25
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  media_volume:
+  static_volume:
+  caddy_data:
+  caddy_config:

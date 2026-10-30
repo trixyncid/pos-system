@@ -1,0 +1,19 @@
+target-version = "py312"
+line-length = 120
+extend-exclude = ["env", "*/migrations/*"]
+
+[lint]
+select = ["E", "F", "W", "I", "B", "UP", "DJ", "S"]
+ignore = [
+    "S101",  # assert in tests
+    "S105",  # "token"-named string constants are setting names, not secrets
+    "S106",
+    "DJ001", # null=True on CharField is avoided by convention, not by rule
+]
+
+[lint.per-file-ignores]
+"*/tests.py" = ["S"]
+"*/test_*.py" = ["S"]
+
+[lint.isort]
+known-first-party = ["backend", "common", "accounts", "audit", "realtime", "outlet", "floor", "catalog", "orders", "payments", "shifts", "inventory", "printing", "reports"]

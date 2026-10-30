@@ -1,0 +1,110 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# Least privilege; a deploy job (added when the server exists) asks for more itself.
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    name: Django checks and tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: backend
+    # Postgres, as in production: row locks (select_for_update) are skipped on
+    # SQLite, so the order and stock rules are only exercised here.
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: pos
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: ci-password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      SECRET_KEY: ci-secret-key-not-used-anywhere-else-0123456789abcdefghij
+      DEBUG: "1"
+      DATABASE_URL: postgres://postgres:ci-password@localhost:5432/pos
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/requirements*.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Lint
+        run: ruff check . && ruff format --check .
+
+      - name: Django system check
+        run: python manage.py check
+
+      - name: Migrations match the models
+        run: python manage.py makemigrations --check --dry-run
+
+      - name: Production settings load
+        run: python manage.py check --deploy --fail-level ERROR
+        env:
+          DEBUG: "0"
+          ALLOWED_HOSTS: api.example.com
+          REDIS_URL: redis://localhost:6379/0
+
+      - name: Django tests
+        run: python manage.py test --verbosity=1
+
+      - name: Caddyfile is valid
+        run: >
+          docker run --rm -v "$PWD/caddy:/etc/caddy:ro"
+          -e DOMAIN=api.example.com -e ACME_EMAIL=ci@example.com
+          caddy:2-alpine caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
+
+  frontend:
+    name: Frontend lint, types, tests, build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Lint and format
+        run: bun run lint && bun run format:check
+
+      - name: Types
+        run: bun run typecheck
+
+      - name: Unit tests
+        run: bun run test
+
+      - name: Build
+        run: bun run build
+
+      - name: End-to-end (tablet viewports, mock API)
+        run: bunx playwright install --with-deps chromium && bun run e2e

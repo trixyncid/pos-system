@@ -1,0 +1,41 @@
+# Caddy is the only process on ports 80 and 443. It obtains and renews the
+# API certificate itself (stored in the caddy_data volume).
+{
+	email {$ACME_EMAIL}
+}
+
+{$DOMAIN} {
+	encode zstd gzip
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+	}
+
+	handle_path /static/* {
+		root * /srv/static
+		header Cache-Control "public, max-age=86400"
+		file_server
+	}
+
+	handle_path /media/* {
+		root * /srv/media
+		header Cache-Control "public, max-age=604800"
+		file_server
+	}
+
+	# Tablets and the print station keep a socket open all service; reverse_proxy
+	# upgrades WebSockets on its own, and a long read timeout keeps idle ones alive.
+	handle /ws/* {
+		reverse_proxy api:8000 {
+			transport http {
+				read_timeout 0
+			}
+		}
+	}
+
+	handle {
+		reverse_proxy api:8000
+	}
+}

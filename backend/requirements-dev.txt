@@ -1,0 +1,4 @@
+-r requirements.txt
+ruff==0.14.6
+# channels.testing imports daphne; production serves ASGI with uvicorn.
+daphne==4.2.1
