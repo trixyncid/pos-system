@@ -6,7 +6,7 @@ const events = ["pointerdown", "keydown", "wheel", "touchstart"] as const
 
 /**
  * Locks a shared tablet after `minutes` without a touch, so the next person
- * cannot act as whoever walked away. Becomes a setting in M2.
+ * cannot act as whoever walked away. The owner sets `minutes` in Settings.
  */
 export function useIdleLock(minutes = 3) {
   const status = useSession((state) => state.status)

@@ -9,4 +9,7 @@ export const outlet: Outlet = {
   service_percent: 5,
   tax_base: "subtotal_with_service",
   cash_rounding: 100,
+  receipt_header: "Telp 0812-3456-7890 · IG @warungsenja",
+  receipt_footer: "Terima kasih! Wi-Fi: senja-tamu / makanenak",
+  idle_lock_minutes: 3,
 }

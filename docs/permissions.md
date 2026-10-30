@@ -4,10 +4,20 @@ Ported from yanksandbrits, with two changes. Checks are by permission only, neve
 
 - **Role** = a Django `Group` plus a `GroupProfile` (`code`, `description`, `is_system`).
 - **Action** = a Django permission. POS actions live on the `accounts.PosAccess` proxy model (`backend/accounts/models.py`), so their full names are `accounts.<codename>`.
-- **Catalog** = `backend/accounts/permission_catalog.py`. Only these permissions can be saved on a role or shown in the role editor. Add a domain model's `(app_label, model)` there when it gets CRUD screens.
-- **Seeding**: `python manage.py seed_roles` (it runs in the entrypoint on every start) creates or resets the system roles from `backend/accounts/roles.py`.
+- **Catalog** = `backend/accounts/permission_catalog.py`. Only these permissions can be saved on a role or shown in the role editor. Today that is the `PosAccess` actions only. The API sends permissions as `"app_label.codename"` strings.
+- **Seeding**: `python manage.py seed_roles` runs in the entrypoint on every start. It creates any missing built-in role from `backend/accounts/roles.py` and leaves the permissions of existing roles alone, so owner edits survive deploys. `seed_roles --reset` restores the defaults.
 - **Backend checks**: `common.permissions.RequirePermission("accounts.void_sent_item")` and `ModelPermissions`. Listing records also needs `view_<model>`.
 - **Frontend checks**: `/auth/me/` returns `permissions`. The page catalog, `<Can>` and the route guards read only that list (M1).
+
+## Guarding against escalation
+
+`backend/accounts/services/access.py`. A user with `manage_staff` works only within their own permissions:
+
+- A role can only be given permissions the editor holds.
+- Staff can only be given roles that do nothing beyond the editor's own permissions.
+- Nobody can edit, or reset the PIN of, someone whose roles go beyond their own.
+- Nobody can deactivate themselves, change their own roles, or edit their own role so they lose `manage_staff`.
+- The Owner role's permissions cannot be edited: it always has the whole catalog, so the outlet can never be locked out.
 
 ## POS actions
 

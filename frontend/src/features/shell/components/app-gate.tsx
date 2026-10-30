@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button.tsx"
 import { LockScreen } from "@/features/auth/components/lock-screen.tsx"
 import { useIdleLock } from "@/features/auth/hooks/use-idle-lock.ts"
 import { useSession } from "@/features/auth/store/session-store.ts"
+import { useOutletQuery } from "@/features/outlet/hooks/use-outlet.ts"
 
 function Unreachable() {
   const { t } = useTranslation()
@@ -33,7 +34,8 @@ function Unreachable() {
 export function AppGate() {
   const status = useSession((state) => state.status)
   const navigate = useNavigate()
-  useIdleLock()
+  const outlet = useOutletQuery()
+  useIdleLock(outlet.data?.idle_lock_minutes)
 
   // Signing out (or the API ending the session) leaves the signed-in screens.
   useEffect(() => {

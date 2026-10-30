@@ -9,6 +9,7 @@ from . import views
 api_v1 = [
     path("auth/", include("accounts.urls")),
     path("", include("outlet.urls")),
+    path("", include("accounts.backoffice_urls")),
 ]
 
 urlpatterns = [

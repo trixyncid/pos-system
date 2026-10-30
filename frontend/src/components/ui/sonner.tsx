@@ -1,6 +1,8 @@
 "use client"
 
 import { Toaster as Sonner, type ToasterProps } from "sonner"
+
+import { useTheme } from "@/components/theme-provider.tsx"
 import "sonner/dist/styles.css"
 import {
   CircleCheckIcon,
@@ -11,6 +13,7 @@ import {
 } from "lucide-react"
 
 const Toaster = ({ ...props }: ToasterProps) => {
+  const { theme } = useTheme()
   return (
     <Sonner
       className="toaster group"
@@ -35,7 +38,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
         },
       }}
       {...props}
-      theme="light"
+      theme={theme}
       richColors
       closeButton
       position="top-center"

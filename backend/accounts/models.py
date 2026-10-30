@@ -24,7 +24,9 @@ class User(AbstractUser):
     first_name = None
     last_name = None
 
-    email = models.EmailField(_("email"), unique=True)
+    # Optional: floor staff often work by PIN only. Without an email an account
+    # cannot sign a tablet in, only unlock one.
+    email = models.EmailField(_("email"), unique=True, null=True, blank=True)
     full_name = models.CharField(_("full name"), max_length=150)
     # Hashed like a password. Never stored or logged as digits.
     pin_hash = models.CharField(_("PIN hash"), max_length=128, blank=True, editable=False)
@@ -43,7 +45,7 @@ class User(AbstractUser):
         ordering = ("full_name",)
 
     def __str__(self):
-        return self.full_name or self.email
+        return self.full_name or self.email or f"User {self.pk}"
 
     # --- PIN -----------------------------------------------------------------
 

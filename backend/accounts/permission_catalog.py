@@ -9,13 +9,27 @@ here appear in the role editor or can be saved on a role.
 from django.contrib.auth.models import Permission
 from django.db.models import Q
 
-# (app_label, model). Domain models are added here as each app gets its models.
+# (app_label, model). Staff and roles are managed through accounts.manage_staff,
+# not through user model permissions, so only the POS actions are listed for
+# now; add a domain model here when an action can't be expressed as one.
 ASSIGNABLE_PERMISSION_MODELS = frozenset(
     {
         ("accounts", "posaccess"),
-        ("accounts", "user"),
     }
 )
+
+
+def codename_of(permission) -> str:
+    """The "app_label.codename" string the API and frontend use for a permission."""
+    return f"{permission.content_type.app_label}.{permission.codename}"
+
+
+def permissions_by_name(names):
+    """Catalog permissions for "app_label.codename" strings, and the names that matched none."""
+    wanted = set(names)
+    found = [permission for permission in assignable_permissions() if codename_of(permission) in wanted]
+    unknown = wanted - {codename_of(permission) for permission in found}
+    return found, sorted(unknown)
 
 
 def assignable_permissions_q() -> Q:

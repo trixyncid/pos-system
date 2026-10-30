@@ -24,5 +24,8 @@ class OutletSerializer(serializers.ModelSerializer):
             "service_percent",
             "tax_base",
             "cash_rounding",
+            "receipt_header",
+            "receipt_footer",
+            "idle_lock_minutes",
         )
         read_only_fields = ("id",)

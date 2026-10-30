@@ -39,7 +39,7 @@ function issue(id: number) {
 export function bearerStaff(request: Request) {
   const token = request.headers.get("Authorization")?.replace("Bearer ", "")
   const id = Number(token?.split(".")[1])
-  return staff.find((member) => member.id === id)
+  return staff.find((member) => member.id === id && member.is_active)
 }
 
 function unauthenticated() {
@@ -54,7 +54,10 @@ export const authHandlers = [
     const body = (await request.json()) as { email?: string; password?: string }
     const member = staff.find(
       (item) =>
+        item.is_active &&
+        item.email !== null &&
         item.email === body.email?.trim().toLowerCase() &&
+        item.password !== null &&
         item.password === body.password
     )
     if (!member)
@@ -94,7 +97,7 @@ export const authHandlers = [
     if (!bearerStaff(request)) return unauthenticated()
     return ok(
       staff
-        .filter((member) => member.pin !== null)
+        .filter((member) => member.is_active && member.pin !== null)
         .map((member) => ({
           id: member.id,
           full_name: member.full_name,
@@ -107,7 +110,9 @@ export const authHandlers = [
     await delay()
     if (!bearerStaff(request)) return unauthenticated()
     const body = (await request.json()) as { user_id?: number; pin?: string }
-    const member = staff.find((item) => item.id === body.user_id)
+    const member = staff.find(
+      (item) => item.id === body.user_id && item.is_active
+    )
     if (!member || member.pin === null)
       return fail(403, "This staff member cannot unlock with a PIN.", {
         code: "pin_unavailable",

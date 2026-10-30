@@ -50,6 +50,25 @@ class Outlet(BaseModel):
         _("cash rounding"), choices=CashRounding.choices, default=CashRounding.HUNDRED
     )
 
+    receipt_header = models.TextField(
+        _("receipt header"),
+        blank=True,
+        default="",
+        help_text=_("Printed under the outlet name, e.g. phone and Instagram."),
+    )
+    receipt_footer = models.TextField(
+        _("receipt footer"),
+        blank=True,
+        default="",
+        help_text=_("Printed at the bottom, e.g. a thank-you or Wi-Fi password."),
+    )
+    idle_lock_minutes = models.PositiveSmallIntegerField(
+        _("idle lock (minutes)"),
+        default=3,
+        validators=[MinValueValidator(1), MaxValueValidator(60)],
+        help_text=_("A tablet locks after this long without a touch."),
+    )
+
     class Meta:
         verbose_name = _("outlet")
         verbose_name_plural = _("outlet")

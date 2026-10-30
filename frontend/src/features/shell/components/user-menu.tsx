@@ -49,7 +49,9 @@ export function UserMenu() {
         <ChevronDownIcon className="size-4 text-muted-foreground" />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-60">
-        <DropdownMenuLabel className="truncate">{user.email}</DropdownMenuLabel>
+        <DropdownMenuLabel className="truncate">
+          {user.email ?? user.full_name}
+        </DropdownMenuLabel>
         <DropdownMenuItem className="h-11" onSelect={lock}>
           <LockIcon />
           {t("auth.lock")}

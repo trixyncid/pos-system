@@ -39,8 +39,17 @@ The web app sends `X-Session-Cookie: 1`, so the refresh token lives in an httpOn
 
 | Method | Path | Permission | Notes |
 |---|---|---|---|
-| GET | `/outlet/` | signed in | `{ id, name, address, npwpd, pbjt_percent, service_percent, tax_base, cash_rounding }` |
-| PATCH | `/outlet/` | `accounts.manage_settings` | Partial update. `pbjt_percent` is at most 10 |
+| GET | `/outlet/` | signed in | `{ id, name, address, npwpd, pbjt_percent, service_percent, tax_base, cash_rounding, receipt_header, receipt_footer, idle_lock_minutes }` |
+| PATCH | `/outlet/` | `accounts.manage_settings` | Partial update. `pbjt_percent` is at most 10; `idle_lock_minutes` is 1–60 |
+| GET | `/permissions/` | `accounts.manage_staff` | `[{ codename: "accounts.take_order", name }]`, the assignable catalog |
+| GET | `/roles/` | `accounts.manage_staff` | `[{ id, name, code, description, is_system, permissions: [codename], member_count }]`, not paginated |
+| POST / PATCH | `/roles/`, `/roles/{id}/` | `accounts.manage_staff` | `{ name, code, description, permissions: [codename] }`. A built-in role keeps its code; the Owner role's permissions are fixed |
+| DELETE | `/roles/{id}/` | `accounts.manage_staff` | Only a non-built-in role with no active staff |
+| GET | `/staff/?search=&active=true\|false&page=` | `accounts.manage_staff` | Paginated `{ id, full_name, email\|null, is_active, roles: [id], role_names, has_pin, can_sign_in, last_login, date_joined }` |
+| POST / PATCH | `/staff/`, `/staff/{id}/` | `accounts.manage_staff` | `{ full_name, email?, password?, pin?, roles: [id], is_active }`. Email is optional (PIN-only staff); a password needs an email. No delete: deactivate instead, which signs the account out everywhere |
+| POST | `/staff/{id}/set-pin/` | `accounts.manage_staff` | `{ pin }` (4–6 digits) |
+
+Escalation rules (both the API and the mock enforce them): nobody can grant a permission or give a role that does more than they can themselves, edit or reset the PIN of someone who can do more than them, deactivate themselves, change their own roles, or remove their own access to staff and roles.
 
 ## Realtime
 

@@ -8,7 +8,7 @@ export const roleSchema = z.object({
 
 export const userSchema = z.object({
   id: z.number(),
-  email: z.string(),
+  email: z.string().nullable(),
   full_name: z.string(),
   has_pin: z.boolean(),
   is_superuser: z.boolean(),

@@ -39,3 +39,28 @@ test("a page outside the user's roles redirects to their start screen", async ({
   await page.goto("/admin/staff")
   await expect(page).toHaveURL(/\/floor$/)
 })
+
+test("owner adds a PIN-only waiter who can then unlock the tablet", async ({
+  page,
+}) => {
+  await page.goto("/login")
+  await page.getByRole("button", { name: "Owner" }).click()
+  await page.getByRole("button", { name: "Masuk" }).click()
+  await page.getByRole("link", { name: "Back office" }).click()
+  await page.getByRole("link", { name: "Staf" }).click()
+
+  await page.getByRole("button", { name: "Tambah staf" }).click()
+  await page.getByLabel("Nama lengkap").fill("Nina Kartika")
+  await page.getByLabel("PIN").fill("7777")
+  await page.getByRole("checkbox", { name: "Pelayan" }).click()
+  await page.getByRole("button", { name: "Simpan" }).click()
+  await expect(page.getByText("Nina Kartika ditambahkan")).toBeVisible()
+
+  await page.getByRole("button", { name: /Rina Wijaya/ }).click()
+  await page.getByRole("menuitem", { name: "Kunci" }).click()
+  const lock = page.getByRole("dialog", { name: "Siapa yang bertugas?" })
+  await lock.getByRole("button", { name: /Nina Kartika/ }).click()
+  for (const digit of "7777")
+    await lock.getByRole("button", { name: digit, exact: true }).click()
+  await expect(page).toHaveURL(/\/floor$/)
+})

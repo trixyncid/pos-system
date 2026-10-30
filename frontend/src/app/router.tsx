@@ -5,6 +5,7 @@ import {
   lazyRouteComponent,
   Outlet,
   redirect,
+  type RouteComponent,
 } from "@tanstack/react-router"
 
 import { NotFoundPage } from "@/app/pages/not-found-page.tsx"
@@ -106,22 +107,34 @@ const adminIndexRoute = createRoute({
   },
 })
 
-/** Catalog pages not yet built show their placeholder; each milestone swaps in the real screen. */
-function placeholderRoute(page: Page) {
+/** Screens that are built; every other catalog page shows its placeholder until its milestone. */
+const builtPages: Partial<Record<Page["key"], RouteComponent>> = {
+  settings: lazyRouteComponent(
+    () => import("@/features/settings/pages/settings-page.tsx"),
+    "SettingsPage"
+  ),
+  staff: lazyRouteComponent(
+    () => import("@/features/staff/pages/staff-page.tsx"),
+    "StaffPage"
+  ),
+  roles: lazyRouteComponent(
+    () => import("@/features/roles/pages/roles-page.tsx"),
+    "RolesPage"
+  ),
+}
+
+function pageRoute(page: Page) {
   const parent = page.shell === "pos" ? posRoute : adminRoute
   return createRoute({
     getParentRoute: () => parent,
     path: page.shell === "pos" ? page.path : page.path.replace("/admin", ""),
-    component: () => <ComingSoonPage pageKey={page.key} />,
+    component:
+      builtPages[page.key] ?? (() => <ComingSoonPage pageKey={page.key} />),
   })
 }
 
-const posPages = pages
-  .filter((page) => page.shell === "pos")
-  .map(placeholderRoute)
-const adminPages = pages
-  .filter((page) => page.shell === "admin")
-  .map(placeholderRoute)
+const posPages = pages.filter((page) => page.shell === "pos").map(pageRoute)
+const adminPages = pages.filter((page) => page.shell === "admin").map(pageRoute)
 
 // Development only: the design kit at /kit, outside the sign-in guard.
 const kitRoute = createRoute({
