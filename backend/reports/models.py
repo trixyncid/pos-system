@@ -1,5 +1,1 @@
-"""
-Planned models (next phase, see docs/architecture.md):
-
-No models: read-only aggregates over orders, payments and stock for the dashboard and reports.
-"""
+"""No models: the dashboard and reports are read-only figures over paid orders (reports.services)."""

@@ -2,6 +2,7 @@ import { delay, http } from "msw"
 
 import { perm } from "@/features/auth/lib/permissions.ts"
 import type { Shift } from "@/features/shifts/schemas/shift.ts"
+import { audit } from "@/mocks/db/audit.ts"
 import { mockId } from "@/mocks/db/catalog.ts"
 import { orders, pushJob } from "@/mocks/db/orders.ts"
 import { currentShift, refreshTotals, shifts } from "@/mocks/db/shifts.ts"
@@ -118,6 +119,7 @@ export const shiftHandlers = [
       movements: [],
     })
     shifts.push(shift)
+    audit("shift.open", actor, "", { opening_cash })
     return ok(shift, { status: 201 })
   }),
 
@@ -169,6 +171,11 @@ export const shiftHandlers = [
       note: (body.note ?? "").trim(),
     })
     printReport(shift, actor)
+    audit("shift.close", actor, "", {
+      counted: shift.counted_cash,
+      expected: shift.expected_cash,
+      variance: shift.variance,
+    })
     return ok(shift)
   }),
 ]

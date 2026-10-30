@@ -1,8 +1,6 @@
 import {
   AlertTriangleIcon,
   BoxesIcon,
-  ChevronLeftIcon,
-  ChevronRightIcon,
   ClipboardCheckIcon,
   PackagePlusIcon,
   PackageXIcon,
@@ -15,6 +13,7 @@ import { useDeferredValue, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { PageHeader } from "@/components/backoffice/page-header.tsx"
+import { Pager } from "@/components/backoffice/pager.tsx"
 import { CountUp } from "@/components/motion/count-up.tsx"
 import { Pressable } from "@/components/motion/pressable.tsx"
 import { MoneyText } from "@/components/pos/money-text.tsx"
@@ -141,44 +140,6 @@ function StockRow({ item, onOpen }: { item: StockItem; onOpen: () => void }) {
         />
       </Pressable>
     </motion.li>
-  )
-}
-
-function Pager({
-  page,
-  hasPrevious,
-  hasNext,
-  onPage,
-}: {
-  page: number
-  hasPrevious: boolean
-  hasNext: boolean
-  onPage: (page: number) => void
-}) {
-  const { t } = useTranslation()
-  if (!hasPrevious && !hasNext) return null
-  return (
-    <div className="flex items-center justify-center gap-3">
-      <Button
-        variant="secondary"
-        size="icon-touch"
-        aria-label={t("inventory.previous")}
-        disabled={!hasPrevious}
-        onClick={() => onPage(page - 1)}
-      >
-        <ChevronLeftIcon />
-      </Button>
-      <span className="text-sm text-muted-foreground tabular-nums">{page}</span>
-      <Button
-        variant="secondary"
-        size="icon-touch"
-        aria-label={t("inventory.next")}
-        disabled={!hasNext}
-        onClick={() => onPage(page + 1)}
-      >
-        <ChevronRightIcon />
-      </Button>
-    </div>
   )
 }
 

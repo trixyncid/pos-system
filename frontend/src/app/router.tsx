@@ -109,6 +109,18 @@ const adminIndexRoute = createRoute({
 
 /** Screens that are built; every other catalog page shows its placeholder until its milestone. */
 const builtPages: Partial<Record<Page["key"], RouteComponent>> = {
+  dashboard: lazyRouteComponent(
+    () => import("@/features/reports/pages/dashboard-page.tsx"),
+    "DashboardPage"
+  ),
+  reports: lazyRouteComponent(
+    () => import("@/features/reports/pages/reports-page.tsx"),
+    "ReportsPage"
+  ),
+  audit: lazyRouteComponent(
+    () => import("@/features/audit/pages/audit-page.tsx"),
+    "AuditPage"
+  ),
   inventory: lazyRouteComponent(
     () => import("@/features/inventory/pages/inventory-page.tsx"),
     "InventoryPage"

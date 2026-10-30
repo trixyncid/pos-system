@@ -16,6 +16,8 @@ api_v1 = [
     path("", include("shifts.urls")),
     path("", include("payments.urls")),
     path("", include("inventory.urls")),
+    path("", include("reports.urls")),
+    path("", include("audit.urls")),
     path("printing/", include("printing.urls")),
 ]
 

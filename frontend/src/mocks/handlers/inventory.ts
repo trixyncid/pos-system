@@ -2,6 +2,7 @@ import { delay, http, HttpResponse } from "msw"
 
 import { perm } from "@/features/auth/lib/permissions.ts"
 import type { Movement } from "@/features/inventory/schemas/inventory.ts"
+import { audit } from "@/mocks/db/audit.ts"
 import { products } from "@/mocks/db/catalog.ts"
 import {
   movements,
@@ -139,6 +140,7 @@ export const inventoryHandlers = [
       })
     })
     batches.set(body.id, made)
+    audit("stock.receive", actor, body.supplier ?? "", { items: made.length })
     return ok(made, { status: 201 })
   }),
 
@@ -158,6 +160,10 @@ export const inventoryHandlers = [
       })
     if (!body.reason.trim())
       return fail(400, "Say why.", { errors: { reason: ["Say why."] } })
+    audit("stock.waste", actor, product.name, {
+      quantity: body.quantity,
+      reason: body.reason.trim(),
+    })
     return ok(
       record(product, -body.quantity, "waste", actor.full_name, {
         reason: body.reason.trim(),
@@ -190,6 +196,10 @@ export const inventoryHandlers = [
         )
     }
     batches.set(body.id, made)
+    audit("stock.count", actor, "", {
+      counted: body.lines.length,
+      adjusted: made.length,
+    })
     return ok(made, { status: 201 })
   }),
 ]

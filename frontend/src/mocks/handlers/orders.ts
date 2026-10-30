@@ -19,6 +19,7 @@ import {
   stationOf,
   ticketPayload,
 } from "@/mocks/db/orders.ts"
+import { audit } from "@/mocks/db/audit.ts"
 import { deductSale, returnVoid } from "@/mocks/db/inventory.ts"
 import {
   currentShift,
@@ -383,6 +384,15 @@ export const orderHandlers = [
       if (approval.error) return approval.error
       Object.assign(line, { status: "void", void_reason: body.reason.trim() })
       returnVoid(order.number, line, actor.full_name)
+      audit(
+        "order.void_item",
+        actor,
+        `#${order.number} · ${line.quantity}× ${line.name}`,
+        {
+          amount: line.total,
+          reason: line.void_reason,
+        }
+      )
       queue(order, [line], "void", actor)
       return changed(order)
     }
@@ -494,6 +504,12 @@ export const orderHandlers = [
     }
     const approval = approve(actor, perm.applyDiscount, body, "discount")
     if (approval.error) return approval.error
+    audit("order.discount", actor, `#${order.number}`, {
+      kind: body.kind,
+      value,
+      reason,
+      approved_by: approval.by.full_name,
+    })
     Object.assign(order, {
       discount_kind: body.kind,
       discount_value: body.kind === "none" ? 0 : value,
@@ -604,6 +620,10 @@ export const orderHandlers = [
       if (table) table.status = "cleaning"
     }
     cashierJob(billPayload(order, "receipt", actor.full_name, payment))
+    audit("order.payment", actor, `#${order.number}`, {
+      amount: due,
+      method: "cash",
+    })
     changed(order)
     return ok(order, { status: 201 })
   }),
@@ -684,6 +704,10 @@ export const orderHandlers = [
     refreshTotals(shift)
     recompute(order)
     cashierJob(billPayload(order, "receipt", actor.full_name, payment))
+    audit("order.sale", actor, `#${order.number}`, {
+      amount: due,
+      method: "cash",
+    })
     changed(order)
     return ok(order, { status: 201 })
   }),

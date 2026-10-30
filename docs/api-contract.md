@@ -156,6 +156,34 @@ Stock lives on tracked products (`track_stock`). `Product.stock` caches the bala
 
 Only tracked, active products can be received, wasted or counted.
 
+### Reports (`/reports/`)
+
+Figures come from **paid** orders by the time they were paid, through the same bill computation as checkout, so they match the receipts. Days are local (Asia/Jakarta) calendar days.
+
+**Cost** is each item's current cost: its recipe (ingredient average costs), or its purchase cost for retail goods. A menu item with no recipe and no cost has an unknown cost (`null` in the items report) and is left out of food cost.
+
+| Method | Path | Permission | Notes |
+|---|---|---|---|
+| GET | `/reports/dashboard/?date=` | `view_dashboard` | One day (default today). Returns the figures below, plus:<br>• `yesterday` and `last_week` as `{ date, sales, orders, partial }`. While the day is still going they cover only the same hours (`partial: true`).<br>• `hourly` (24 sales totals), `channels` `{ restaurant, snackbar }` (each the figures below).<br>• `top_items` (8), `waiters`, `voids` (by approver), `discounts` (by approver).<br>• `table_turns`, `low_stock`. |
+| GET | `/reports/sales/?from=&to=` | `view_reports` | One row per day (default the last 7), at most 92 days. |
+| GET | `/reports/items/?from=&to=` | `view_reports` | Per product: `{ product, name, kind, channel_restaurant, channel_snackbar, quantity, revenue, cost, margin }`, best revenue first. |
+
+Figures: `{ orders, covers, gross, discount, service, tax, rounding, sales, net, cost, food_cost_percent, average_ticket }`.
+- `sales` is what guests paid.
+- `net` is gross minus discount, without service or tax.
+- `food_cost_percent` is cost / net.
+
+CSV export happens on the tablet from these rows: a UTF-8 BOM so Excel reads it, and formula-like cells defused.
+
+### Audit (`/audit/events/`, needs `accounts.view_audit`)
+
+`GET /audit/events/?action=&actor=&search=&date=`: paginated, newest first.
+- `action` is a prefix (`order.` or `order.void_item`).
+- `search` matches the actor, the target or the action.
+- `date` is one local day.
+
+Event: `{ id, created_at, actor, actor_name, action, target_type, target_id, target_label, ip_address, metadata }`. Read-only; rows are append-only.
+
 ### Shifts (`/shifts/`)
 
 One drawer, so one open shift at a time. Reading needs any of `open_shift`, `close_shift`, `take_payment` or `open_drawer`.
@@ -203,4 +231,4 @@ Escalation rules (both the API and the mock enforce them): nobody can grant a pe
 
 ## Planned (filled in milestone by milestone)
 
-Floor (areas, tables), catalog (categories, products, modifiers, recipes), print jobs, staff and roles, reports, audit log.
+Floor (areas, tables), catalog (categories, products, modifiers, recipes), print jobs, staff and roles.

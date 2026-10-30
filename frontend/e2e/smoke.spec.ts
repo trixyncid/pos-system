@@ -166,3 +166,25 @@ test("a manager receives a delivery and counts stock", async ({ page }) => {
   await count.getByRole("button", { name: /^Simpan opname/ }).click()
   await expect(page.getByText("1 dihitung, 1 disesuaikan")).toBeVisible()
 })
+
+test("the owner reads the dashboard, a report and the audit log", async ({
+  page,
+}) => {
+  await page.goto("/login")
+  await page.getByRole("button", { name: "Owner" }).click()
+  await page.getByRole("button", { name: "Masuk" }).click()
+  await page.getByRole("link", { name: "Back office" }).click()
+  await page.getByRole("link", { name: "Dashboard" }).click()
+  await expect(page.getByText("Penjualan per jam")).toBeVisible()
+  await expect(page.getByText("Item terlaris")).toBeVisible()
+
+  await page.getByRole("link", { name: "Laporan" }).click()
+  await page.getByRole("radio", { name: "30 hari" }).click()
+  const download = page.waitForEvent("download")
+  await page.getByRole("button", { name: "Unduh CSV" }).click()
+  expect((await download).suggestedFilename()).toMatch(/^penjualan_.*\.csv$/)
+
+  await page.getByRole("link", { name: "Log audit" }).click()
+  await page.getByRole("radio", { name: "Pesanan" }).click()
+  await expect(page.getByText("Void item").first()).toBeVisible()
+})
