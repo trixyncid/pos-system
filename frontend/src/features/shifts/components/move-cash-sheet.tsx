@@ -119,7 +119,7 @@ export function MoveCashSheet({
     <TouchSheet
       open={kind !== null}
       onOpenChange={(open) => !open && onClose()}
-      side="right"
+      side="center"
       title={
         kind === "out" ? t("shifts.moveTitleOut") : t("shifts.moveTitleIn")
       }

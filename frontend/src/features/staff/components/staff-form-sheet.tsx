@@ -13,6 +13,7 @@ import {
   FieldLabel,
 } from "@/components/ui/field.tsx"
 import { Input } from "@/components/ui/input.tsx"
+import { PasswordInput } from "@/components/ui/password-input.tsx"
 import { Spinner } from "@/components/ui/spinner.tsx"
 import { Switch } from "@/components/ui/switch.tsx"
 import { useRolesQuery } from "@/features/roles/api/roles.ts"
@@ -35,6 +36,13 @@ const serverFields = [
   "roles",
   "is_active",
 ] as const
+
+function withoutType({
+  type: _type,
+  ...rest
+}: React.ComponentProps<typeof Input>) {
+  return rest
+}
 
 function Editor({
   member,
@@ -86,15 +94,28 @@ function Editor({
       {(field) => (
         <Field data-invalid={field.state.meta.errors.length > 0}>
           <FieldLabel htmlFor={`staff-${name}`}>{label}</FieldLabel>
-          <Input
-            id={`staff-${name}`}
-            className="h-12 rounded-xl text-base"
-            value={field.state.value}
-            onBlur={field.handleBlur}
-            onChange={(event) => field.handleChange(event.target.value)}
-            aria-invalid={field.state.meta.errors.length > 0}
-            {...props}
-          />
+          {props.type === "password" ? (
+            <PasswordInput
+              id={`staff-${name}`}
+              className="h-12 rounded-xl text-base"
+              value={field.state.value}
+              onBlur={field.handleBlur}
+              onChange={(event) => field.handleChange(event.target.value)}
+              aria-invalid={field.state.meta.errors.length > 0}
+              {...withoutType(props)}
+              wrapperClassName={name === "pin" ? "w-48" : undefined}
+            />
+          ) : (
+            <Input
+              id={`staff-${name}`}
+              className="h-12 rounded-xl text-base"
+              value={field.state.value}
+              onBlur={field.handleBlur}
+              onChange={(event) => field.handleChange(event.target.value)}
+              aria-invalid={field.state.meta.errors.length > 0}
+              {...props}
+            />
+          )}
           {hint && <FieldDescription>{hint}</FieldDescription>}
           <FieldError errors={fieldErrors(field.state.meta.errors)} />
         </Field>
@@ -134,7 +155,7 @@ function Editor({
             inputMode: "numeric",
             maxLength: 6,
             autoComplete: "off",
-            className: "h-12 w-40 rounded-xl text-base tracking-[0.4em]",
+            className: "h-12 rounded-xl text-base tracking-[0.4em]",
           },
           t("staff.pinHint")
         )}
@@ -222,7 +243,7 @@ export function StaffFormSheet({
     <TouchSheet
       open={member !== undefined}
       onOpenChange={(open) => !open && onClose()}
-      side="right"
+      side="center"
       title={member ? t("staff.editTitle") : t("staff.newTitle")}
       description={t("staff.formHint")}
     >

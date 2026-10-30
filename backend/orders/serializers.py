@@ -71,6 +71,8 @@ class OrderSerializer(serializers.ModelSerializer):
             "discount_kind",
             "discount_value",
             "discount_reason",
+            "promo",
+            "promo_name",
             "bill",
             "paid",
             "remaining",

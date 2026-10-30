@@ -13,6 +13,7 @@ import {
 import { billTotals, percentOf, shareOf, type BillRules } from "@/lib/money.ts"
 import { areas } from "@/mocks/db/floor.ts"
 import { outlet } from "@/mocks/db/outlet.ts"
+import { promoDiscount, promos } from "@/mocks/db/promos.ts"
 import { staff } from "@/mocks/db/staff.ts"
 
 export const orders: Order[] = []
@@ -41,8 +42,13 @@ export function billRules(): BillRules {
   }
 }
 
-/** backend payments/billing.order_discount */
-export function discountOf(order: Order, subtotal: number) {
+/** backend payments/billing.order_discount: the bill's promo, or its manual discount. */
+export function discountOf(order: Order, lines: OrderLine[]) {
+  const subtotal = lines.reduce((sum, line) => sum + line.total, 0)
+  if (order.promo) {
+    const promo = promos.find((p) => p.id === order.promo)
+    return promo ? promoDiscount(promo, lines) : 0
+  }
   if (order.discount_kind === "percent")
     return Math.min(subtotal, percentOf(subtotal, order.discount_value))
   if (order.discount_kind === "amount")
@@ -66,7 +72,14 @@ export function linesBill(order: Order, lines: OrderLine[]) {
   return billFor(
     order,
     lines,
-    shareOf(discountOf(order, order.subtotal), part, order.subtotal)
+    shareOf(
+      discountOf(
+        order,
+        order.lines.filter((l) => l.status !== "void")
+      ),
+      part,
+      order.subtotal
+    )
   )
 }
 
@@ -77,7 +90,10 @@ export function recompute(order: Order) {
   order.bill = billFor(
     order,
     order.lines.filter((line) => line.status !== "void"),
-    discountOf(order, order.subtotal)
+    discountOf(
+      order,
+      order.lines.filter((l) => l.status !== "void")
+    )
   )
   order.paid = order.payments.reduce((sum, p) => sum + p.amount, 0)
   order.remaining = Math.max(0, order.bill.total - order.paid)
@@ -102,6 +118,8 @@ export function blankOrder(
     discount_kind: "none",
     discount_value: 0,
     discount_reason: "",
+    promo: null,
+    promo_name: "",
     bill: billTotals(0, 0, billRules()),
     paid: 0,
     remaining: 0,
@@ -336,8 +354,9 @@ export function billPayload(
     line_totals: lines.map((line) => line.total),
     bill: order.bill,
     rates: { service: outlet.service_percent, pbjt: outlet.pbjt_percent },
-    discount:
-      order.discount_kind === "none"
+    discount: order.promo
+      ? { kind: "promo", value: 0, reason: order.promo_name }
+      : order.discount_kind === "none"
         ? null
         : {
             kind: order.discount_kind,

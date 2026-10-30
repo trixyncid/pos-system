@@ -18,6 +18,7 @@ const permissionNames: Record<string, string> = {
   [perm.takeOrder]: "Can take orders",
   [perm.voidSentItem]: "Can void an item already sent to the kitchen",
   [perm.applyDiscount]: "Can apply a discount",
+  [perm.managePromos]: "Can set up promos",
   [perm.approveOverride]: "Can approve a void or discount with their PIN",
   [perm.reprint]: "Can reprint a ticket or receipt",
   [perm.takePayment]: "Can take payment",

@@ -55,6 +55,7 @@ INSTALLED_APPS = [
     "inventory.apps.InventoryConfig",
     "printing.apps.PrintingConfig",
     "reports.apps.ReportsConfig",
+    "promos.apps.PromosConfig",
 ]
 
 AUTH_USER_MODEL = "accounts.User"

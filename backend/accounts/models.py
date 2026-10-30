@@ -122,6 +122,7 @@ class PosAccess(GroupProfile):
             ("take_order", "Can take orders"),
             ("void_sent_item", "Can void an item already sent to the kitchen"),
             ("apply_discount", "Can apply a discount"),
+            ("manage_promos", "Can set up promos"),
             ("approve_override", "Can approve a void or discount with their PIN"),
             ("reprint", "Can reprint a ticket or receipt"),
             ("take_payment", "Can take payment"),

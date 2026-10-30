@@ -184,6 +184,32 @@ CSV export happens on the tablet from these rows: a UTF-8 BOM so Excel reads it,
 
 Event: `{ id, created_at, actor, actor_name, action, target_type, target_id, target_label, ip_address, metadata }`. Read-only; rows are append-only.
 
+### Promos (`/promos/`, set-up needs `accounts.manage_promos`)
+
+A bill carries one discount: a promo or a manual discount. Applying one clears the other. The cashier picks the promo at checkout; promos never apply themselves.
+
+Promo: `{ id, name, description, image_url, kind, benefit, value, max_discount, min_spend, products, categories, buy_quantity, get_quantity, channel, starts_on, ends_on, weekdays, starts_at, ends_at, is_active }`.
+
+| `kind` | What comes off (before service and PBJT) |
+|---|---|
+| `bill` | `benefit: percent\|amount` of the subtotal |
+| `items` | per covered unit: `percent` off, `amount` off, or `price` (a promo price; never a surcharge) |
+| `bundle` | buy `buy_quantity`, get `get_quantity`: in each group of covered units the cheapest come off by `value` percent (100 = free) |
+
+- **Covered items:** `products` and/or `categories`.
+- **Limits:** `min_spend` and `max_discount` apply to every kind.
+- **Schedule:** `weekdays` (0 = Monday, empty = every day), `starts_at`–`ends_at` (a window may cross midnight), `starts_on`–`ends_on`, `channel: all|restaurant|snackbar`.
+
+| Method | Path | Permission | Notes |
+|---|---|---|---|
+| GET/POST | `/promos/` | `manage_promos` | |
+| PATCH/DELETE | `/promos/{id}/` | `manage_promos` | DELETE switches the promo off; past bills still name it |
+| POST | `/promos/{id}/image/` | `manage_promos` | Banner, cropped on the tablet to 1200×600 |
+| GET | `/orders/{id}/promos/` | `take_payment` | Today's promos, each with `saving` for this bill, `unavailable: day\|time\|min_spend\|no_items\|null` and `applied` |
+| POST | `/orders/{id}/promo/` | `take_payment` | `{ promo: id\|null }`. Refused if the promo isn't on now or the bill doesn't qualify, or once any payment is taken. Audited. |
+
+Orders carry `promo` and `promo_name`. The bill and receipt print the discount as "Promo <name>". The dashboard lists promo discounts as "Promo · <name>".
+
 ### Shifts (`/shifts/`)
 
 One drawer, so one open shift at a time. Reading needs any of `open_shift`, `close_shift`, `take_payment` or `open_drawer`.

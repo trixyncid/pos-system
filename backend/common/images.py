@@ -38,6 +38,8 @@ class ImageSpec:
 
 # Menu and product photos: 4:3, the shape of the order screen's cards.
 PRODUCT = ImageSpec(width=1200, height=900, max_bytes=250 * 1024)
+# Promo banners: 2:1, wide enough to read at the top of the promo picker.
+PROMO = ImageSpec(width=1200, height=600, max_bytes=250 * 1024)
 
 
 class ImageRejected(ValueError):

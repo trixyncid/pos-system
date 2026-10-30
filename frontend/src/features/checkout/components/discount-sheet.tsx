@@ -1,3 +1,4 @@
+import { TicketPercentIcon } from "lucide-react"
 import { useState } from "react"
 import { useTranslation } from "react-i18next"
 import { toast } from "sonner"
@@ -9,6 +10,7 @@ import { TouchSheet } from "@/components/pos/touch-sheet.tsx"
 import { Button } from "@/components/ui/button.tsx"
 import { Input } from "@/components/ui/input.tsx"
 import { MoneyInput } from "@/components/ui/money-input.tsx"
+import { Skeleton } from "@/components/ui/skeleton.tsx"
 import { Spinner } from "@/components/ui/spinner.tsx"
 import { useCan } from "@/features/auth/hooks/use-can.ts"
 import { perm } from "@/features/auth/lib/permissions.ts"
@@ -22,8 +24,14 @@ import {
 } from "@/features/ordering/components/approval-panel.tsx"
 import type { Order } from "@/features/ordering/schemas/order.ts"
 import { useBillRules } from "@/features/outlet/hooks/use-bill-rules.ts"
+import {
+  useApplyPromo,
+  useOfferedPromosQuery,
+} from "@/features/promos/api/promos.ts"
+import { describeBenefit } from "@/features/promos/lib/describe.ts"
+import type { OfferedPromo } from "@/features/promos/schemas/promo.ts"
 import { apiErrorMessage } from "@/lib/api-error.ts"
-import { billTotals, discountAmount } from "@/lib/money.ts"
+import { billTotals, discountAmount, formatIDR } from "@/lib/money.ts"
 import { cn } from "@/lib/utils.ts"
 
 const PRESETS = [5, 10, 15, 20, 25, 50] as const
@@ -54,7 +62,7 @@ function Chip({
   )
 }
 
-function Body({ order, onDone }: { order: Order; onDone: () => void }) {
+function ManualBody({ order, onDone }: { order: Order; onDone: () => void }) {
   const { t } = useTranslation()
   const rules = useBillRules()
   const canDiscount = useCan(perm.applyDiscount)
@@ -234,6 +242,143 @@ function Body({ order, onDone }: { order: Order; onDone: () => void }) {
 }
 
 /** A bill discount, percent or amount, always with a reason; a manager approves when the user can't. */
+function PromoBody({ order, onDone }: { order: Order; onDone: () => void }) {
+  const { t } = useTranslation()
+  const offered = useOfferedPromosQuery(order.id, true)
+  const apply = useApplyPromo()
+  const locked = order.payments.length > 0
+
+  const choose = async (promo: OfferedPromo | null) => {
+    try {
+      await apply.mutateAsync({ orderId: order.id, promo: promo?.id ?? null })
+      toast.success(
+        promo
+          ? t("discount.promoApplied", { name: promo.name })
+          : t("discount.promoRemoved")
+      )
+      onDone()
+    } catch (error) {
+      toast.error(apiErrorMessage(error))
+    }
+  }
+
+  if (locked)
+    return (
+      <p className="rounded-2xl bg-warning/15 p-4 text-sm text-warning-ink">
+        {t("discount.lockedPaid")}
+      </p>
+    )
+  if (offered.isPending)
+    return (
+      <div className="space-y-2">
+        {Array.from({ length: 3 }, (_, i) => (
+          <Skeleton key={i} className="h-20 rounded-2xl" />
+        ))}
+      </div>
+    )
+  const rows = offered.data ?? []
+  if (rows.length === 0)
+    return (
+      <p className="py-10 text-center text-muted-foreground">
+        {t("discount.noPromos")}
+      </p>
+    )
+
+  return (
+    <div className="space-y-2">
+      {order.discount_kind !== "none" && (
+        <p className="rounded-2xl bg-muted p-3 text-sm text-muted-foreground">
+          {t("discount.promoReplaces")}
+        </p>
+      )}
+      <ul className="space-y-2">
+        {rows.map((promo) => {
+          const usable = promo.unavailable === null
+          return (
+            <li key={promo.id}>
+              <Pressable
+                pressScale={usable ? 0.98 : 1}
+                disabled={!usable || apply.isPending}
+                onClick={() => void choose(promo.applied ? null : promo)}
+                className={cn(
+                  "flex w-full items-center gap-3 rounded-2xl border bg-background p-3 text-left transition-colors",
+                  promo.applied && "border-primary bg-primary/5",
+                  !usable && "opacity-55"
+                )}
+              >
+                <span className="grid size-12 shrink-0 place-items-center overflow-hidden rounded-xl bg-primary/10 text-primary">
+                  {promo.image_url ? (
+                    <img
+                      src={promo.image_url}
+                      alt=""
+                      className="size-full object-cover"
+                    />
+                  ) : (
+                    <TicketPercentIcon className="size-6" />
+                  )}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate font-medium">
+                    {promo.name}
+                  </span>
+                  <span className="block truncate text-sm text-muted-foreground">
+                    {usable
+                      ? describeBenefit(promo, t)
+                      : t(`discount.unavailable.${promo.unavailable!}`, {
+                          amount: formatIDR(promo.min_spend),
+                        })}
+                  </span>
+                </span>
+                {usable && (
+                  <span className="shrink-0 text-right">
+                    <span className="block font-heading font-semibold text-success-ink tabular-nums">
+                      −{formatIDR(promo.saving)}
+                    </span>
+                    <span className="block text-xs text-muted-foreground">
+                      {promo.applied
+                        ? t("discount.tapToRemove")
+                        : t("discount.tapToUse")}
+                    </span>
+                  </span>
+                )}
+              </Pressable>
+            </li>
+          )
+        })}
+      </ul>
+    </div>
+  )
+}
+
+function Body({ order, onDone }: { order: Order; onDone: () => void }) {
+  const { t } = useTranslation()
+  const canPay = useCan(perm.takePayment)
+  const [tab, setTab] = useState<"promo" | "manual">(
+    order.discount_kind !== "none" || !canPay ? "manual" : "promo"
+  )
+  return (
+    <div className="space-y-5">
+      {canPay && (
+        <Segmented
+          label={t("discount.title")}
+          value={tab}
+          onChange={setTab}
+          options={[
+            { value: "promo", label: t("discount.tabPromo") },
+            { value: "manual", label: t("discount.tabManual") },
+          ]}
+          className="w-full"
+        />
+      )}
+      {tab === "promo" ? (
+        <PromoBody order={order} onDone={onDone} />
+      ) : (
+        <ManualBody order={order} onDone={onDone} />
+      )}
+    </div>
+  )
+}
+
 export function DiscountSheet({
   order,
   open,
@@ -248,9 +393,9 @@ export function DiscountSheet({
     <TouchSheet
       open={open}
       onOpenChange={(next) => !next && onClose()}
-      side="right"
+      side="center"
       title={t("discount.title")}
-      description={t("discount.body")}
+      description={t("discount.oneOnly")}
       className="w-[min(560px,calc(100vw-1rem))]"
     >
       {open && <Body order={order} onDone={onClose} />}

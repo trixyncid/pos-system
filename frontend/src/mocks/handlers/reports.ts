@@ -164,7 +164,7 @@ export const reportHandlers = [
       if (o.bill.discount)
         bump(
           discounts,
-          "Dimas Pratama",
+          o.promo_name ? `Promo · ${o.promo_name}` : "Dimas Pratama",
           { count: 0, amount: 0 },
           { count: 1, amount: o.bill.discount }
         )

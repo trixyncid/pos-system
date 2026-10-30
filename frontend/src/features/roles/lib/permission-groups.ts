@@ -27,6 +27,7 @@ export const permissionGroups: readonly {
       perm.viewDashboard,
       perm.viewReports,
       perm.manageSettings,
+      perm.managePromos,
       perm.editFloor,
       perm.manageStock,
       perm.manageStaff,

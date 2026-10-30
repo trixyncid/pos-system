@@ -116,7 +116,7 @@ export function ItemSheet({
     <TouchSheet
       open={item !== null}
       onOpenChange={(open) => !open && onClose()}
-      side="right"
+      side="center"
       title={item?.name ?? ""}
       description={item?.category_name ?? undefined}
       className="w-[min(560px,calc(100vw-1rem))]"

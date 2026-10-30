@@ -25,6 +25,9 @@ from orders.serializers import (
     VoidSerializer,
 )
 from payments import services as checkout
+from promos import services as promo_services
+from promos.models import Promo
+from promos.serializers import ApplyPromoSerializer, PromoSerializer
 
 TakeOrder = RequirePermission("accounts.take_order")
 TakePayment = RequirePermission("accounts.take_payment")
@@ -40,7 +43,7 @@ class OrderViewSet(viewsets.GenericViewSet):
     pagination_class = None
 
     def get_permissions(self):
-        if self.action in {"bill", "payments"}:
+        if self.action in {"bill", "payments", "promos", "promo"}:
             return [TakePayment]
         return [TakeOrder]
 
@@ -48,6 +51,8 @@ class OrderViewSet(viewsets.GenericViewSet):
         return Order.objects.select_related("table", "opened_by").prefetch_related(
             Prefetch("lines", queryset=OrderLine.objects.select_related("added_by").order_by("created_at")),
             "payments__received_by",
+            "promo__products",
+            "promo__categories",
         )
 
     def _approver(self, data):
@@ -226,3 +231,44 @@ class OrderViewSet(viewsets.GenericViewSet):
         )
         emit(request, "order.payment", target=order, metadata={"amount": payment.amount, "method": payment.method})
         return self._reply(order, status=201)
+
+    @extend_schema(request=None, responses=dict)
+    @action(detail=True, methods=["get"])
+    def promos(self, request, pk=None):
+        """The promos the cashier can offer on this bill now, each with what it would take off."""
+        order = self.get_object()
+        lines = promo_services.live_lines(order)
+        rows = []
+        for promo in Promo.objects.filter(is_active=True).prefetch_related("products", "categories"):
+            reason = promo_services.unavailable_reason(promo, channel=order.channel)
+            if reason in {"inactive", "channel", "not_started", "ended"}:
+                continue  # Not a promo for today at all: keep the list short.
+            saving = promo_services.discount(promo, lines) if reason is None else 0
+            if reason is None and saving <= 0:
+                reason = "min_spend" if sum(line.total for line in lines) < promo.min_spend else "no_items"
+            rows.append(
+                {
+                    **PromoSerializer(promo, context={"request": request}).data,
+                    "saving": saving,
+                    "unavailable": reason,
+                    "applied": order.promo_id == promo.pk,
+                }
+            )
+        rows.sort(key=lambda row: (row["unavailable"] is not None, -row["saving"]))
+        return ok(rows)
+
+    @extend_schema(request=ApplyPromoSerializer, responses=OrderSerializer)
+    @action(detail=True, methods=["post"])
+    def promo(self, request, pk=None):
+        data = ApplyPromoSerializer(data=request.data)
+        data.is_valid(raise_exception=True)
+        promo = data.validated_data["promo"]
+        order = promo_services.apply(order_id=pk, promo=promo)
+        emit(
+            request,
+            "order.promo",
+            target=order,
+            target_label=f"#{order.number}",
+            metadata={"promo": promo.name if promo else None},
+        )
+        return self._reply(order)

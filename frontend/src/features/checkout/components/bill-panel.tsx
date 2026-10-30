@@ -9,6 +9,7 @@ import { MoneyText } from "@/components/pos/money-text.tsx"
 import { QtyStepper } from "@/components/pos/qty-stepper.tsx"
 import { Segmented } from "@/components/pos/segmented.tsx"
 import type { Order, OrderLine } from "@/features/ordering/schemas/order.ts"
+import { discountLabel } from "@/features/checkout/lib/discount-label.ts"
 import { useBillRules } from "@/features/outlet/hooks/use-bill-rules.ts"
 import { formatIDR } from "@/lib/money.ts"
 import { spring } from "@/lib/motion.ts"
@@ -234,14 +235,12 @@ export function BillPanel({
                 className="inline-flex h-8 items-center gap-1.5 rounded-lg text-success-ink underline-offset-4 enabled:hover:underline"
               >
                 <PercentIcon className="size-3.5" />
-                {order.discount_kind === "percent"
-                  ? t("checkout.discountPercent", {
-                      value: order.discount_value,
-                    })
-                  : t("checkout.discount")}
-                <span className="truncate text-muted-foreground">
-                  · {order.discount_reason}
-                </span>
+                {discountLabel(order, t)}
+                {order.discount_reason && (
+                  <span className="truncate text-muted-foreground">
+                    · {order.discount_reason}
+                  </span>
+                )}
               </button>
             }
             tone="success"

@@ -2,7 +2,6 @@
 
 import { Toaster as Sonner, type ToasterProps } from "sonner"
 
-import { useTheme } from "@/components/theme-provider.tsx"
 import "sonner/dist/styles.css"
 import {
   CircleCheckIcon,
@@ -12,8 +11,12 @@ import {
   Loader2Icon,
 } from "lucide-react"
 
+/**
+ * Toasts always use the light rich colours (green, red, amber on a pale
+ * fill), in dark mode too: they stand out from the dark UI instead of
+ * blending into it. Top centre, where a tablet user is looking.
+ */
 const Toaster = ({ ...props }: ToasterProps) => {
-  const { theme } = useTheme()
   return (
     <Sonner
       className="toaster group"
@@ -38,7 +41,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
         },
       }}
       {...props}
-      theme={theme}
+      theme="light"
       richColors
       closeButton
       position="top-center"

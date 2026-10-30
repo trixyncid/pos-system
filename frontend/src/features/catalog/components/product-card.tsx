@@ -1,6 +1,7 @@
 import { StarIcon } from "lucide-react"
 import { motion } from "motion/react"
 import { useTranslation } from "react-i18next"
+import { toast } from "sonner"
 
 import { MoneyText } from "@/components/pos/money-text.tsx"
 import { ProductImage } from "@/components/pos/product-image.tsx"
@@ -93,11 +94,17 @@ export function ProductCard({
         <Switch
           checked={product.is_available}
           onCheckedChange={(is_available) =>
-            setAvailable.mutate({
-              id: product.id,
-              kind: product.kind,
-              is_available,
-            })
+            setAvailable.mutate(
+              { id: product.id, kind: product.kind, is_available },
+              {
+                onSuccess: () =>
+                  toast.success(
+                    t(is_available ? "menu.nowAvailable" : "menu.nowSoldOut", {
+                      name: product.name,
+                    })
+                  ),
+              }
+            )
           }
           aria-label={t("menu.available")}
         />

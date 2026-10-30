@@ -289,7 +289,7 @@ export function ModifierGroupSheet({
     <TouchSheet
       open={group !== undefined}
       onOpenChange={(open) => !open && onClose()}
-      side="right"
+      side="center"
       title={group ? group.name : t("menu.addGroup")}
       className="w-[min(560px,calc(100vw-1rem))]"
     >

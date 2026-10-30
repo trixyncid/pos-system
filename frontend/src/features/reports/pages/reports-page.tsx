@@ -6,7 +6,6 @@ import { PageHeader } from "@/components/backoffice/page-header.tsx"
 import { RiseIn } from "@/components/motion/rise-in.tsx"
 import { Segmented } from "@/components/pos/segmented.tsx"
 import { Button } from "@/components/ui/button.tsx"
-import { Input } from "@/components/ui/input.tsx"
 import { Skeleton } from "@/components/ui/skeleton.tsx"
 import {
   useItemsReportQuery,
@@ -14,24 +13,16 @@ import {
   type Range,
 } from "@/features/reports/api/reports.ts"
 import { DailyChart } from "@/features/reports/components/daily-chart.tsx"
+import {
+  DateRangePicker,
+  presets,
+} from "@/features/reports/components/date-range-picker.tsx"
 import type { ItemRow, SalesDay } from "@/features/reports/schemas/reports.ts"
 import { apiErrorMessage } from "@/lib/api-error.ts"
 import { downloadCsv } from "@/lib/csv.ts"
-import { addDays, isoDate, parseIsoDate, today } from "@/lib/dates.ts"
+import { isoDate, parseIsoDate } from "@/lib/dates.ts"
 import { formatIDR } from "@/lib/money.ts"
 import { cn } from "@/lib/utils.ts"
-
-type Preset = "7" | "30" | "month" | "custom"
-
-function presetRange(preset: Exclude<Preset, "custom">): Range {
-  const to = today()
-  if (preset === "month") {
-    const start = parseIsoDate(to)
-    start.setDate(1)
-    return { from: isoDate(start), to }
-  }
-  return { from: addDays(to, -(Number(preset) - 1)), to }
-}
 
 const day = new Intl.DateTimeFormat("id-ID", {
   weekday: "short",
@@ -225,16 +216,14 @@ function Stat({ label, value }: { label: string; value: string }) {
 
 export function ReportsPage() {
   const { t } = useTranslation()
-  const [preset, setPreset] = useState<Preset>("7")
-  const [range, setRange] = useState<Range>(() => presetRange("7"))
+  // The last 7 days until the owner picks another period.
+  const [range, setRange] = useState<Range>(() => {
+    const week = presets().find((preset) => preset.key === "last7")!
+    return { from: isoDate(week.from), to: isoDate(week.to) }
+  })
   const [tab, setTab] = useState<"sales" | "items">("sales")
   const sales = useSalesReportQuery(range)
   const items = useItemsReportQuery(range, tab === "items")
-
-  const choose = (next: Preset) => {
-    setPreset(next)
-    if (next !== "custom") setRange(presetRange(next))
-  }
 
   const exportCsv = () => {
     const name = `${range.from}_${range.to}`
@@ -315,50 +304,10 @@ export function ReportsPage() {
         }
       />
 
-      <div className="flex flex-wrap items-center gap-3">
-        <Segmented
-          label={t("reports.range")}
-          value={preset}
-          onChange={choose}
-          options={[
-            { value: "7", label: t("reports.last7") },
-            { value: "30", label: t("reports.last30") },
-            { value: "month", label: t("reports.thisMonth") },
-            { value: "custom", label: t("reports.custom") },
-          ]}
-        />
-        {preset === "custom" && (
-          <div className="flex items-center gap-2">
-            <Input
-              type="date"
-              value={range.from}
-              max={range.to}
-              onChange={(event) =>
-                event.target.value &&
-                setRange((r) => ({ ...r, from: event.target.value }))
-              }
-              aria-label={t("reports.from")}
-              className="h-11 w-44 rounded-xl"
-            />
-            <span className="text-muted-foreground">–</span>
-            <Input
-              type="date"
-              value={range.to}
-              min={range.from}
-              max={today()}
-              onChange={(event) =>
-                event.target.value &&
-                setRange((r) => ({ ...r, to: event.target.value }))
-              }
-              aria-label={t("reports.to")}
-              className="h-11 w-44 rounded-xl"
-            />
-          </div>
-        )}
-      </div>
+      <DateRangePicker value={range} onChange={setRange} />
 
       {total && (
-        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
           <Stat label={t("reports.sales")} value={formatIDR(total.sales)} />
           <Stat label={t("reports.orders")} value={String(total.orders)} />
           <Stat

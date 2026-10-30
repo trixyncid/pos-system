@@ -7,6 +7,7 @@ import {
   PackageIcon,
   PencilRulerIcon,
   PrinterIcon,
+  TicketPercentIcon,
   ScanBarcodeIcon,
   ScrollTextIcon,
   SettingsIcon,
@@ -30,6 +31,7 @@ type NavKey =
   | "dashboard"
   | "reports"
   | "menu"
+  | "promos"
   | "floorEditor"
   | "inventory"
   | "staff"
@@ -138,6 +140,15 @@ export const pages: readonly Page[] = [
     icon: BookOpenIcon,
     anyOf: [perm.manageSettings],
     milestone: "M3",
+  },
+  {
+    key: "promos",
+    path: "/admin/promos",
+    shell: "admin",
+    section: "catalog",
+    icon: TicketPercentIcon,
+    anyOf: [perm.managePromos],
+    milestone: "M6",
   },
   {
     key: "floorEditor",

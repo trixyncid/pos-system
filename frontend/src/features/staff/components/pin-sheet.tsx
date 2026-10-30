@@ -70,7 +70,7 @@ export function PinSheet({
           onClose()
         }
       }}
-      side="right"
+      side="center"
       title={member ? t("staff.pinTitle", { name: member.full_name }) : ""}
       description={first === null ? t("staff.pinNew") : t("staff.pinConfirm")}
       footer={

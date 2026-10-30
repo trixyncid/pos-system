@@ -6,6 +6,7 @@ import { toast } from "sonner"
 
 import { Pressable } from "@/components/motion/pressable.tsx"
 import { MoneyText } from "@/components/pos/money-text.tsx"
+import { ImageCropDialog } from "@/components/image-crop-dialog.tsx"
 import { ProductImage } from "@/components/pos/product-image.tsx"
 import { Segmented } from "@/components/pos/segmented.tsx"
 import { StatusPill } from "@/components/pos/status-pill.tsx"
@@ -64,6 +65,11 @@ import {
 import { apiErrorMessage, apiFieldErrors } from "@/lib/api-error.ts"
 import { fieldErrors } from "@/lib/form-errors.ts"
 import { applyServerErrors } from "@/lib/form-server-errors.ts"
+import {
+  ACCEPTED_IMAGE_TYPES,
+  imagePresets,
+  MAX_SOURCE_BYTES,
+} from "@/lib/image-presets.ts"
 import { cn } from "@/lib/utils.ts"
 
 const serverFields = [
@@ -183,6 +189,11 @@ function Editor({
     product?.image_url ?? null
   )
   const [confirmArchive, setConfirmArchive] = useState(false)
+  // A picked photo waits here until it is cropped to the card shape.
+  const [cropping, setCropping] = useState<{
+    source: string
+    name: string
+  } | null>(null)
 
   const form = useForm({
     defaultValues: defaults(kind, product, initialCategory),
@@ -205,7 +216,19 @@ function Editor({
   const values = useStore(form.store, (state) => state.values)
   const submitting = useStore(form.store, (state) => state.isSubmitting)
 
-  const pickPhoto = async (file: File) => {
+  const pickPhoto = (file: File) => {
+    if (!(ACCEPTED_IMAGE_TYPES as readonly string[]).includes(file.type)) {
+      toast.error(t("crop.wrongType"))
+      return
+    }
+    if (file.size > MAX_SOURCE_BYTES) {
+      toast.error(t("crop.tooBig"))
+      return
+    }
+    setCropping({ source: URL.createObjectURL(file), name: file.name })
+  }
+
+  const applyPhoto = async (file: File) => {
     setPreview(URL.createObjectURL(file))
     if (!product) {
       setPendingFile(file)
@@ -289,17 +312,16 @@ function Editor({
           <ProductImage
             src={preview}
             alt={values.name || "?"}
-            className="aspect-16/9"
+            className="aspect-4/3"
           />
           <input
             ref={fileInput}
             type="file"
             accept="image/jpeg,image/png,image/webp"
-            capture="environment"
             className="hidden"
             onChange={(event) => {
               const file = event.target.files?.[0]
-              if (file) void pickPhoto(file)
+              if (file) pickPhoto(file)
               event.target.value = ""
             }}
           />
@@ -319,6 +341,22 @@ function Editor({
               {t("menu.photoAfterSave")}
             </p>
           )}
+          <ImageCropDialog
+            key={cropping?.source}
+            source={cropping?.source ?? null}
+            fileName={cropping?.name ?? "photo"}
+            preset={imagePresets.product}
+            title={t("crop.productTitle")}
+            onCancel={() => {
+              if (cropping) URL.revokeObjectURL(cropping.source)
+              setCropping(null)
+            }}
+            onCropped={(file) => {
+              if (cropping) URL.revokeObjectURL(cropping.source)
+              setCropping(null)
+              void applyPhoto(file)
+            }}
+          />
         </div>
       )}
 
@@ -621,7 +659,7 @@ export function ProductSheet({
     <TouchSheet
       open={product !== undefined}
       onOpenChange={(open) => !open && onClose()}
-      side="right"
+      side="center"
       title={title}
       className="w-[min(640px,calc(100vw-1rem))]"
     >

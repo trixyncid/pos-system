@@ -23,7 +23,7 @@ export function Delta({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1 text-xs font-medium",
+        "inline-flex items-center gap-1 text-xs font-medium whitespace-nowrap",
         percent === null || percent === 0
           ? "text-muted-foreground"
           : percent > 0

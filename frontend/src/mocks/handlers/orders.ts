@@ -20,6 +20,7 @@ import {
   ticketPayload,
 } from "@/mocks/db/orders.ts"
 import { audit } from "@/mocks/db/audit.ts"
+import { promoDiscount, promos, unavailableReason } from "@/mocks/db/promos.ts"
 import { deductSale, returnVoid } from "@/mocks/db/inventory.ts"
 import {
   currentShift,
@@ -510,12 +511,99 @@ export const orderHandlers = [
       reason,
       approved_by: approval.by.full_name,
     })
+    // One discount per bill: a manual discount replaces a promo.
+    if (body.kind !== "none")
+      Object.assign(order, { promo: null, promo_name: "" })
     Object.assign(order, {
       discount_kind: body.kind,
       discount_value: body.kind === "none" ? 0 : value,
       discount_reason: body.kind === "none" ? "" : reason,
     })
     unbill(order)
+    return changed(order)
+  }),
+
+  http.get(apiPath("/orders/:id/promos/"), async ({ request, params }) => {
+    const { error } = actorWith(request, perm.takePayment)
+    if (error) return error
+    await delay()
+    const order = orders.find((o) => o.id === params.id)
+    if (!order) return fail(404, "Not found.")
+    const lines = order.lines.filter((l) => l.status !== "void")
+    const subtotal = lines.reduce((sum, l) => sum + l.total, 0)
+    const rows = promos.flatMap((promo) => {
+      let reason: string | null = unavailableReason(promo, order.channel)
+      if (
+        reason &&
+        ["inactive", "channel", "not_started", "ended"].includes(reason)
+      )
+        return []
+      const saving = reason === null ? promoDiscount(promo, lines) : 0
+      if (reason === null && saving <= 0)
+        reason = subtotal < promo.min_spend ? "min_spend" : "no_items"
+      return [
+        {
+          ...promo,
+          saving,
+          unavailable: reason,
+          applied: order.promo === promo.id,
+        },
+      ]
+    })
+    rows.sort(
+      (a, b) =>
+        Number(a.unavailable !== null) - Number(b.unavailable !== null) ||
+        b.saving - a.saving
+    )
+    return ok(rows)
+  }),
+
+  http.post(apiPath("/orders/:id/promo/"), async ({ request, params }) => {
+    const { actor, error } = actorWith(request, perm.takePayment)
+    if (error) return error
+    await delay()
+    const found = openOrder(params.id)
+    if (found.error) return found.error
+    const order = found.order
+    if (order.payments.length)
+      return fail(
+        400,
+        "Part of this bill is paid; the discount can no longer change."
+      )
+    const { promo: promoId } = (await request.json()) as {
+      promo: string | null
+    }
+    const promo = promoId ? promos.find((p) => p.id === promoId) : null
+    if (promoId && !promo) return fail(400, "Invalid promo.")
+    if (promo) {
+      const reason = unavailableReason(promo, order.channel)
+      if (reason)
+        return fail(400, `This promo isn't available now (${reason}).`, {
+          errors: { promo: [`This promo isn't available now (${reason}).`] },
+        })
+      if (
+        promoDiscount(
+          promo,
+          order.lines.filter((l) => l.status !== "void")
+        ) <= 0
+      )
+        return fail(400, "This bill doesn't qualify for the promo.", {
+          errors: { promo: ["This bill doesn't qualify for the promo."] },
+        })
+      Object.assign(order, {
+        discount_kind: "none",
+        discount_value: 0,
+        discount_reason: "",
+      })
+    }
+    Object.assign(order, {
+      promo: promo?.id ?? null,
+      promo_name: promo?.name ?? "",
+    })
+    unbill(order)
+    audit("order.promo", actor, `#${order.number}`, {
+      promo: promo?.name ?? null,
+    })
     return changed(order)
   }),
 

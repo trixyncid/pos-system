@@ -120,7 +120,7 @@ function HistorySheet({
     <TouchSheet
       open={open}
       onOpenChange={(next) => !next && onClose()}
-      side="right"
+      side="center"
       title={t("snackbar.today")}
       description={t("snackbar.todaySummary", {
         count: sales.data?.length ?? 0,
@@ -397,11 +397,11 @@ export function SnackbarPage() {
           setPaying(open)
           if (!open) setTendered("")
         }}
-        side="right"
+        side="center"
         title={t("snackbar.payTitle", { count: lines.length })}
         className="w-[min(30rem,calc(100vw-1rem))]"
       >
-        <div className="-mx-5 -mb-5 h-[calc(100dvh-9rem)]">
+        <div className="-mx-6 -mb-6 h-[min(76dvh,680px)]">
           <CashPanel
             due={bill.total}
             tendered={tendered}

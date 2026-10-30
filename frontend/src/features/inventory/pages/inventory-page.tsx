@@ -81,7 +81,7 @@ function Kpi({
         />
         {label}
       </span>
-      <span className="mt-1 block font-heading text-2xl font-semibold tabular-nums">
+      <span className="mt-1 block font-heading text-2xl font-semibold whitespace-nowrap tabular-nums">
         {value === undefined ? "—" : <CountUp value={value} format={format} />}
       </span>
     </Pressable>
@@ -334,7 +334,7 @@ export function InventoryPage() {
         }
       />
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
         <Kpi
           icon={BoxesIcon}
           label={t("inventory.tracked")}

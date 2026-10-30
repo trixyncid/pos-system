@@ -168,7 +168,7 @@ export function CloseShiftSheet({
     <TouchSheet
       open={open}
       onOpenChange={(next) => !next && onClose()}
-      side="right"
+      side="center"
       title={t("shifts.closeTitle")}
       description={t("shifts.closeBody")}
       className="w-[min(560px,calc(100vw-1rem))]"

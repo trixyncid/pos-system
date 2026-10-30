@@ -81,6 +81,11 @@ class Order(BaseModel):
     discount_approved_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True, related_name="+"
     )
+    # One discount per bill: a promo or the manual discount above, never both.
+    promo = models.ForeignKey(
+        "promos.Promo", on_delete=models.PROTECT, null=True, blank=True, related_name="+", verbose_name=_("promo")
+    )
+    promo_name = models.CharField(_("promo name"), max_length=80, blank=True, default="")
     # Bumped on every change, so a tablet can tell its copy is stale.
     version = models.PositiveIntegerField(_("version"), default=1)
 

@@ -104,6 +104,7 @@ function AreaSheet({
           event.preventDefault()
           try {
             const saved = await save.mutateAsync({ id: area?.id, name })
+            toast.success(t("floor.areaSaved", { name: saved.name }))
             onClose(area ? undefined : saved)
           } catch (err) {
             setError(apiFieldErrors(err).name ?? apiErrorMessage(err))
@@ -164,6 +165,7 @@ function AreaSheet({
               onClick={async () => {
                 if (!area) return
                 await remove.mutateAsync(area.id)
+                toast.success(t("floor.areaDeleted", { name: area.name }))
                 onClose()
               }}
             >
@@ -310,7 +312,7 @@ export function FloorEditorPage() {
       </div>
 
       {area && (
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_17rem]">
+        <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_17rem]">
           <div className="space-y-3">
             <div className="flex flex-wrap items-center gap-2">
               {(Object.keys(presets) as (keyof typeof presets)[]).map((key) => (

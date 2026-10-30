@@ -19,6 +19,7 @@ SYSTEM_ROLES: dict[str, tuple[str, tuple[str, ...]]] = {
             "take_order",
             "void_sent_item",
             "apply_discount",
+            "manage_promos",
             "approve_override",
             "reprint",
             "take_payment",

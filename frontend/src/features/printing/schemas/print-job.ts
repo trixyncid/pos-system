@@ -70,7 +70,7 @@ export const ticketPayloadSchema = z.object({
   rates: z.object({ service: z.number(), pbjt: z.number() }).optional(),
   discount: z
     .object({
-      kind: z.enum(["percent", "amount"]),
+      kind: z.enum(["percent", "amount", "promo"]),
       value: z.number(),
       reason: z.string(),
     })

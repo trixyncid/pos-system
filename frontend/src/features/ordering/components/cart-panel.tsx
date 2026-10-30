@@ -15,6 +15,7 @@ import { MoneyText } from "@/components/pos/money-text.tsx"
 import { Button } from "@/components/ui/button.tsx"
 import { Spinner } from "@/components/ui/spinner.tsx"
 import { CartLine } from "@/features/ordering/components/cart-line.tsx"
+import { discountLabel } from "@/features/checkout/lib/discount-label.ts"
 import { useLanded } from "@/features/ordering/components/fly-to-cart.tsx"
 import type {
   DraftLine,
@@ -149,7 +150,10 @@ export function CartPanel({
   const bill = drafts.length
     ? billTotals(
         subtotal,
-        discountAmount(order.discount_kind, order.discount_value, subtotal),
+        // A promo's discount comes from the API; new lines may change it once sent.
+        order.promo
+          ? order.bill.discount
+          : discountAmount(order.discount_kind, order.discount_value, subtotal),
         rules,
         {
           // New lines are counted as PBJT until the API says otherwise.
@@ -304,16 +308,7 @@ export function CartPanel({
         <div className="space-y-1">
           <TotalRow label={t("order.subtotal")} amount={bill.subtotal} />
           {bill.discount > 0 && (
-            <TotalRow
-              label={
-                order.discount_kind === "percent"
-                  ? t("checkout.discountPercent", {
-                      value: order.discount_value,
-                    })
-                  : t("checkout.discount")
-              }
-              amount={-bill.discount}
-            />
+            <TotalRow label={discountLabel(order, t)} amount={-bill.discount} />
           )}
           {bill.service > 0 && (
             <TotalRow

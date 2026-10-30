@@ -5,6 +5,7 @@ export const perm = {
   takeOrder: "accounts.take_order",
   voidSentItem: "accounts.void_sent_item",
   applyDiscount: "accounts.apply_discount",
+  managePromos: "accounts.manage_promos",
   approveOverride: "accounts.approve_override",
   reprint: "accounts.reprint",
   takePayment: "accounts.take_payment",

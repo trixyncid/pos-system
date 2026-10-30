@@ -1,7 +1,6 @@
 import { Link } from "@tanstack/react-router"
 import {
   AlertTriangleIcon,
-  ChevronLeftIcon,
   ChevronRightIcon,
   ReceiptIcon,
   UsersIcon,
@@ -9,14 +8,12 @@ import {
   type LucideIcon,
 } from "lucide-react"
 import type { ReactNode } from "react"
-import { useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { PageHeader } from "@/components/backoffice/page-header.tsx"
 import { CountUp } from "@/components/motion/count-up.tsx"
 import { RiseIn } from "@/components/motion/rise-in.tsx"
 import { MoneyText } from "@/components/pos/money-text.tsx"
-import { Button } from "@/components/ui/button.tsx"
 import { Skeleton } from "@/components/ui/skeleton.tsx"
 import { pageByKey } from "@/features/auth/lib/page-catalog.ts"
 import { useDashboardQuery } from "@/features/reports/api/reports.ts"
@@ -26,8 +23,9 @@ import { HourlyChart } from "@/features/reports/components/hourly-chart.tsx"
 import { RankedList } from "@/features/reports/components/ranked-list.tsx"
 import type { Dashboard } from "@/features/reports/schemas/reports.ts"
 import { apiErrorMessage } from "@/lib/api-error.ts"
-import { addDays, parseIsoDate, today } from "@/lib/dates.ts"
+import { isoDate } from "@/lib/dates.ts"
 import { formatIDR } from "@/lib/money.ts"
+import { useNow } from "@/lib/use-now.ts"
 import { cn } from "@/lib/utils.ts"
 
 const dayName = new Intl.DateTimeFormat("id-ID", {
@@ -107,7 +105,7 @@ function Body({ data }: { data: Dashboard }) {
   const inventory = pageByKey("inventory").path
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
         <Kpi
           icon={WalletIcon}
           label={t("dashboard.sales")}
@@ -119,20 +117,12 @@ function Body({ data }: { data: Dashboard }) {
               <Delta
                 now={data.sales}
                 before={data.yesterday.sales}
-                label={t(
-                  data.yesterday.partial
-                    ? "dashboard.vsYesterdaySoFar"
-                    : "dashboard.vsYesterday"
-                )}
+                label={t("dashboard.vsYesterday")}
               />
               <Delta
                 now={data.sales}
                 before={data.last_week.sales}
-                label={t(
-                  data.last_week.partial
-                    ? "dashboard.vsLastWeekSoFar"
-                    : "dashboard.vsLastWeek"
-                )}
+                label={t("dashboard.vsLastWeek")}
               />
             </>
           }
@@ -147,11 +137,7 @@ function Body({ data }: { data: Dashboard }) {
             <Delta
               now={data.orders}
               before={data.yesterday.orders}
-              label={t(
-                data.yesterday.partial
-                  ? "dashboard.vsYesterdaySoFar"
-                  : "dashboard.vsYesterday"
-              )}
+              label={t("dashboard.vsYesterday")}
             />
           }
         />
@@ -180,10 +166,10 @@ function Body({ data }: { data: Dashboard }) {
         />
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-3">
+      <div className="grid gap-4 xl:grid-cols-3">
         <Card
           title={t("dashboard.byHour")}
-          className="lg:col-span-2"
+          className="xl:col-span-2"
           delay={0.1}
         >
           {data.sales > 0 ? (
@@ -222,7 +208,7 @@ function Body({ data }: { data: Dashboard }) {
         </Card>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         <Card title={t("dashboard.topItems")} delay={0.18}>
           <RankedList
             rows={data.top_items}
@@ -307,47 +293,24 @@ function Body({ data }: { data: Dashboard }) {
 
 export function DashboardPage() {
   const { t } = useTranslation()
-  const [date, setDate] = useState(today)
-  const dashboard = useDashboardQuery(date)
-  const isToday = date === today()
+  // Today only, and it rolls over at midnight on a tablet left open.
+  const now = useNow(60_000)
+  const dashboard = useDashboardQuery(isoDate(now))
 
   return (
     <div className="mx-auto max-w-6xl space-y-6 p-6 lg:p-8">
       <PageHeader
         title={t("dashboard.title")}
-        description={
-          isToday ? t("dashboard.today") : dayName.format(parseIsoDate(date))
-        }
-        actions={
-          <div className="flex items-center gap-1 rounded-2xl bg-card p-1 shadow-(--shadow-soft)">
-            <Button
-              variant="ghost"
-              size="icon-touch"
-              aria-label={t("dashboard.previousDay")}
-              onClick={() => setDate((d) => addDays(d, -1))}
-            >
-              <ChevronLeftIcon />
-            </Button>
-            <span className="min-w-36 text-center text-sm font-medium">
-              {isToday
-                ? t("dashboard.todayShort")
-                : dayName.format(parseIsoDate(date))}
-            </span>
-            <Button
-              variant="ghost"
-              size="icon-touch"
-              aria-label={t("dashboard.nextDay")}
-              disabled={isToday}
-              onClick={() => setDate((d) => addDays(d, 1))}
-            >
-              <ChevronRightIcon />
-            </Button>
-          </div>
-        }
+        description={t(
+          dashboard.data?.yesterday.partial
+            ? "dashboard.todayDateSoFar"
+            : "dashboard.todayDate",
+          { date: dayName.format(now) }
+        )}
       />
       {dashboard.isPending ? (
         <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+          <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
             {Array.from({ length: 4 }, (_, i) => (
               <Skeleton key={i} className="h-32 rounded-3xl" />
             ))}

@@ -179,7 +179,8 @@ test("the owner reads the dashboard, a report and the audit log", async ({
   await expect(page.getByText("Item terlaris")).toBeVisible()
 
   await page.getByRole("link", { name: "Laporan" }).click()
-  await page.getByRole("radio", { name: "30 hari" }).click()
+  await page.getByRole("button", { name: /7 hari terakhir/ }).click()
+  await page.getByRole("button", { name: "30 hari terakhir" }).click()
   const download = page.waitForEvent("download")
   await page.getByRole("button", { name: "Unduh CSV" }).click()
   expect((await download).suggestedFilename()).toMatch(/^penjualan_.*\.csv$/)

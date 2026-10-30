@@ -298,7 +298,7 @@ export function RoleEditorSheet({
     <TouchSheet
       open={role !== undefined}
       onOpenChange={(open) => !open && onClose()}
-      side="right"
+      side="center"
       title={role ? role.name : t("roles.newTitle")}
       description={role?.description || undefined}
       className="w-[min(640px,calc(100vw-1rem))]"

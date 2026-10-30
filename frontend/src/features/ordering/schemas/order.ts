@@ -60,6 +60,9 @@ export const orderSchema = z.object({
   discount_kind: z.enum(["none", "percent", "amount"]),
   discount_value: z.number(),
   discount_reason: z.string(),
+  /** One discount per bill: a promo (by name) or the manual discount above. */
+  promo: z.uuid().nullable(),
+  promo_name: z.string(),
   /** Computed by the API in the same order as billTotals(): the tablet never sums money itself. */
   bill: billSchema,
   paid: z.number(),

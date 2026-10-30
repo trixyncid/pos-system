@@ -39,7 +39,8 @@ def paid_orders(start: datetime, end: datetime):
     lines = Prefetch("lines", queryset=OrderLine.objects.select_related("product").prefetch_related(recipe))
     return (
         Order.objects.filter(status=OrderStatus.PAID, closed_at__gte=start, closed_at__lt=end)
-        .select_related("opened_by", "discount_approved_by")
+        .select_related("opened_by", "discount_approved_by", "promo")
+        .prefetch_related("promo__products", "promo__categories")
         .prefetch_related(lines)
     )
 
@@ -146,10 +147,11 @@ def dashboard(day: date) -> dict:
         waiter = order.opened_by.full_name
         waiters[waiter]["orders"] += 1
         waiters[waiter]["sales"] += bill.total
-        if bill.discount and order.discount_approved_by:
-            approver = order.discount_approved_by.full_name
-            discounts[approver]["count"] += 1
-            discounts[approver]["amount"] += bill.discount
+        if bill.discount and (order.promo_name or order.discount_approved_by):
+            # Promos by name; manual discounts by the manager who approved them.
+            name = f"Promo · {order.promo_name}" if order.promo_name else order.discount_approved_by.full_name
+            discounts[name]["count"] += 1
+            discounts[name]["amount"] += bill.discount
         for line in lines:
             items[line.name]["quantity"] += line.quantity
             items[line.name]["revenue"] += line.total

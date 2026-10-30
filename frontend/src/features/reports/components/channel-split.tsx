@@ -47,7 +47,9 @@ export function ChannelSplit({
                 aria-hidden
               />
               <div className="min-w-0 flex-1">
-                <p className="font-medium">{t(`dashboard.channel.${key}`)}</p>
+                <p className="truncate font-medium">
+                  {t(`dashboard.channel.${key}`)}
+                </p>
                 <p className="text-xs text-muted-foreground tabular-nums">
                   {share}% ·{" "}
                   {t("dashboard.ordersCount", { count: figures.orders })}
@@ -55,7 +57,7 @@ export function ChannelSplit({
               </div>
               <MoneyText
                 amount={figures.sales}
-                className="font-medium whitespace-nowrap"
+                className="shrink-0 font-medium whitespace-nowrap"
               />
             </li>
           )

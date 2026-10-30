@@ -16,6 +16,13 @@ import {
 import { Input } from "@/components/ui/input.tsx"
 import { Skeleton } from "@/components/ui/skeleton.tsx"
 import { Spinner } from "@/components/ui/spinner.tsx"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select.tsx"
 import { Textarea } from "@/components/ui/textarea.tsx"
 import {
   useOutletQuery,
@@ -259,15 +266,25 @@ function SettingsEditor({ outlet }: { outlet: Outlet }) {
             {(field) => (
               <Field>
                 <FieldLabel>{t("settings.idleLock")}</FieldLabel>
-                <Segmented
-                  label={t("settings.idleLock")}
-                  value={field.state.value}
-                  onChange={field.handleChange}
-                  options={[1, 3, 5, 10, 15].map((minutes) => ({
-                    value: minutes,
-                    label: `${minutes} ${t("settings.minutes")}`,
-                  }))}
-                />
+                <Select
+                  value={String(field.state.value)}
+                  onValueChange={(value) => field.handleChange(Number(value))}
+                >
+                  <SelectTrigger
+                    size="lg"
+                    className="w-full max-w-60"
+                    aria-label={t("settings.idleLock")}
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {[1, 3, 5, 10, 15, 30].map((minutes) => (
+                      <SelectItem key={minutes} value={String(minutes)}>
+                        {minutes} {t("settings.minutes")}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <FieldDescription>
                   {t("settings.idleLockHint")}
                 </FieldDescription>

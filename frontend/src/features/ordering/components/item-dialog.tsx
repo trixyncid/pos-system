@@ -118,11 +118,13 @@ function Body({
   }
 
   return (
-    <div className="grid max-h-[88dvh] min-h-0 md:grid-cols-[minmax(0,0.85fr)_minmax(0,1fr)]">
+    // A fixed height (not just a cap): the options scroll inside it and the
+    // Add bar always stays on screen, however short the tablet is.
+    <div className="flex max-h-[calc(100dvh-1.5rem)] min-h-0 flex-col md:grid md:h-[min(calc(100dvh-1.5rem),46rem)] md:grid-cols-[minmax(0,0.85fr)_minmax(0,1fr)] md:grid-rows-[minmax(0,1fr)]">
       <motion.div
         layoutId={`menu-photo-${product.id}`}
         transition={spring.sheet}
-        className="relative overflow-hidden md:h-full"
+        className="relative max-h-[28dvh] shrink-0 overflow-hidden md:h-full md:max-h-none"
       >
         <ProductImage
           src={product.image_url}
@@ -145,7 +147,7 @@ function Body({
         </div>
       </motion.div>
 
-      <div className="flex min-h-0 flex-col">
+      <div className="flex min-h-0 flex-1 flex-col">
         <div className="min-h-0 flex-1 space-y-6 overflow-y-auto overscroll-contain p-6">
           {groups.map((group) => {
             const picked = selected[group.id] ?? []

@@ -5,6 +5,7 @@ import { floorHandlers } from "@/mocks/handlers/floor.ts"
 import { inventoryHandlers } from "@/mocks/handlers/inventory.ts"
 import { orderHandlers } from "@/mocks/handlers/orders.ts"
 import { outletHandlers } from "@/mocks/handlers/outlet.ts"
+import { promoHandlers } from "@/mocks/handlers/promos.ts"
 import { reportHandlers } from "@/mocks/handlers/reports.ts"
 import { shiftHandlers } from "@/mocks/handlers/shifts.ts"
 
@@ -18,4 +19,5 @@ export const handlers = [
   ...shiftHandlers,
   ...inventoryHandlers,
   ...reportHandlers,
+  ...promoHandlers,
 ]

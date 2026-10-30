@@ -121,7 +121,7 @@ export function WasteSheet({
     <TouchSheet
       open={item !== null}
       onOpenChange={(open) => !open && onClose()}
-      side="right"
+      side="center"
       title={item ? t("inventory.wasteTitle", { name: item.name }) : ""}
       description={t("inventory.wasteBody")}
     >

@@ -170,7 +170,7 @@ export function CategorySheet({
     <TouchSheet
       open={category !== undefined}
       onOpenChange={(open) => !open && onClose()}
-      side="right"
+      side="center"
       title={category ? t("menu.editCategory") : t("menu.addCategory")}
     >
       {category !== undefined && (

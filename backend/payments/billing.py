@@ -70,9 +70,15 @@ def compute(subtotal: int, discount: int, outlet: Outlet, *, service: bool = Tru
     )
 
 
-def order_discount(order, subtotal: int) -> int:
+def order_discount(order, lines) -> int:
+    """The bill's one discount: its promo, or the manual discount."""
     from orders.models import DiscountKind
 
+    subtotal = sum(line.total for line in lines)
+    if order.promo_id:
+        from promos.services import discount
+
+        return discount(order.promo, lines)
     if order.discount_kind == DiscountKind.PERCENT:
         return min(subtotal, percent_of(subtotal, order.discount_value))
     if order.discount_kind == DiscountKind.AMOUNT:
@@ -100,13 +106,13 @@ def _bill_for(order, lines, discount: int, outlet: Outlet) -> Bill:
 
 def order_bill(order, outlet: Outlet | None = None) -> Bill:
     lines = _live(order)
-    subtotal = sum(line.total for line in lines)
-    return _bill_for(order, lines, order_discount(order, subtotal), outlet or Outlet.load())
+    return _bill_for(order, lines, order_discount(order, lines), outlet or Outlet.load())
 
 
 def lines_bill(order, lines, outlet: Outlet | None = None) -> Bill:
     """The share of the bill for some lines: the order's discount is spread in proportion."""
-    whole = sum(line.total for line in _live(order))
+    every = _live(order)
+    whole = sum(line.total for line in every)
     part = sum(line.total for line in lines)
-    discount = share_of(order_discount(order, whole), part, whole)
+    discount = share_of(order_discount(order, every), part, whole)
     return _bill_for(order, lines, discount, outlet or Outlet.load())

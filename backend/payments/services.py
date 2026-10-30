@@ -60,6 +60,10 @@ def set_discount(*, user, order_id, kind: str, value: int, reason: str, approver
     authorised_by = user if user.has_perm(APPLY_DISCOUNT) else approver
     if authorised_by is None:
         raise ApprovalRequired("A manager must approve this discount.")
+    if kind != DiscountKind.NONE:
+        # One discount per bill: a manual discount replaces a promo.
+        order.promo = None
+        order.promo_name = ""
     order.discount_kind = kind
     order.discount_value = 0 if kind == DiscountKind.NONE else value
     order.discount_reason = "" if kind == DiscountKind.NONE else reason.strip()

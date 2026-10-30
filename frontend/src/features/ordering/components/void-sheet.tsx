@@ -140,7 +140,7 @@ export function VoidSheet({
     <TouchSheet
       open={line !== null}
       onOpenChange={(open) => !open && onClose()}
-      side="right"
+      side="center"
       title={
         line
           ? t("order.voidTitle", { name: `${line.quantity}× ${line.name}` })

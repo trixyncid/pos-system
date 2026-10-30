@@ -229,7 +229,16 @@ export function PrintStationPage() {
               size="touch"
               className="w-full"
               disabled={test.isPending}
-              onClick={() => test.mutate(station)}
+              onClick={() =>
+                test.mutate(station, {
+                  onSuccess: () =>
+                    toast.success(
+                      t("station.testSent", {
+                        station: t(`station.${station as "kitchen"}`),
+                      })
+                    ),
+                })
+              }
             >
               {test.isPending ? <Spinner /> : <PrinterIcon />}
               {t("station.test", {

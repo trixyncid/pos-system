@@ -7,6 +7,10 @@ import { Button } from "@/components/ui/button.tsx"
 import { visiblePages } from "@/features/auth/lib/route-access.ts"
 import { useSession } from "@/features/auth/store/session-store.ts"
 import { useOutletQuery } from "@/features/outlet/hooks/use-outlet.ts"
+import {
+  LanguageMenu,
+  ThemeSwitch,
+} from "@/features/shell/components/preferences.tsx"
 import { UserMenu } from "@/features/shell/components/user-menu.tsx"
 import { spring } from "@/lib/motion.ts"
 import { useNow } from "@/lib/use-now.ts"
@@ -39,7 +43,7 @@ export function PosShell() {
           <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary text-primary-foreground">
             <StoreIcon className="size-5" />
           </span>
-          <span className="hidden truncate font-heading font-semibold lg:block">
+          <span className="hidden truncate font-heading font-semibold xl:block">
             {outlet.data?.name}
           </span>
         </div>
@@ -65,7 +69,7 @@ export function PosShell() {
                   />
                 )}
                 <Icon className="relative size-5" />
-                <span className="relative hidden md:inline">
+                <span className="relative hidden whitespace-nowrap lg:inline">
                   {t(`nav.${page.key}`)}
                 </span>
               </Link>
@@ -73,7 +77,7 @@ export function PosShell() {
           })}
         </nav>
 
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-1 xl:gap-2">
           <span className="hidden font-heading text-lg font-medium tabular-nums xl:block">
             {clock.format(now)}
           </span>
@@ -85,6 +89,8 @@ export function PosShell() {
               </Link>
             </Button>
           )}
+          <LanguageMenu />
+          <ThemeSwitch className="hidden md:flex" />
           <UserMenu />
         </div>
       </header>

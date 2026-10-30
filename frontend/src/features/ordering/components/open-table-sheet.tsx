@@ -1,6 +1,7 @@
 import { useNavigate } from "@tanstack/react-router"
 import { useState } from "react"
 import { useTranslation } from "react-i18next"
+import { toast } from "sonner"
 
 import { Pressable } from "@/components/motion/pressable.tsx"
 import { QtyStepper } from "@/components/pos/qty-stepper.tsx"
@@ -58,6 +59,7 @@ function Body({ table, onDone }: { table: FloorTable; onDone: () => void }) {
               table: table.id,
               guests,
             })
+            toast.success(t("order.opened", { label: table.label }))
             onDone()
             await navigate({
               to: "/order/$orderId",

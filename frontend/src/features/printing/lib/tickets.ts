@@ -208,9 +208,11 @@ export function billTicket(
     if (bill.discount) {
       const discount = payload.discount
       const label =
-        discount?.kind === "percent"
-          ? `Diskon ${percent(discount.value)}`
-          : "Diskon"
+        discount?.kind === "promo"
+          ? `Promo ${discount.reason}`
+          : discount?.kind === "percent"
+            ? `Diskon ${percent(discount.value)}`
+            : "Diskon"
       doc.push({ type: "row", left: label, right: `-${money(bill.discount)}` })
     }
     if (bill.service)

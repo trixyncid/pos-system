@@ -26,6 +26,7 @@ import {
 } from "lucide-react"
 import { motion } from "motion/react"
 import { useTranslation } from "react-i18next"
+import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button.tsx"
 import { useReorderCategories } from "@/features/catalog/api/catalog.ts"
@@ -149,7 +150,8 @@ export function CategoryRail({
         ids,
         ids.indexOf(String(active.id)),
         ids.indexOf(String(over.id))
-      )
+      ),
+      { onSuccess: () => toast.success(t("menu.reordered")) }
     )
   }
 

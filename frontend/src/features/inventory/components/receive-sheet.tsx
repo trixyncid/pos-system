@@ -221,7 +221,7 @@ export function ReceiveSheet({
     <TouchSheet
       open={open}
       onOpenChange={(next) => !next && onClose()}
-      side="right"
+      side="center"
       title={t("inventory.receiveTitle")}
       description={t("inventory.receiveBody")}
       className="w-[min(600px,calc(100vw-1rem))]"

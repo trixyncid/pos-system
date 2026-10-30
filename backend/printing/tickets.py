@@ -64,7 +64,9 @@ def bill_payload(order, bill, *, kind: str, by, outlet, payment=None, paid: int 
             "service": float(outlet.service_percent),
             "pbjt": float(outlet.pbjt_percent),
         },
-        "discount": None
+        "discount": {"kind": "promo", "value": 0, "reason": order.promo_name}
+        if order.promo_id
+        else None
         if order.discount_kind == "none"
         else {"kind": order.discount_kind, "value": order.discount_value, "reason": order.discount_reason},
         "payment": None

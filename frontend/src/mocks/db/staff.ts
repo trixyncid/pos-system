@@ -32,6 +32,7 @@ export const roles: MockRole[] = [
       perm.takeOrder,
       perm.voidSentItem,
       perm.applyDiscount,
+      perm.managePromos,
       perm.approveOverride,
       perm.reprint,
       perm.takePayment,

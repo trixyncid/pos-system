@@ -213,13 +213,13 @@ export function CountSheet({
     <TouchSheet
       open={open}
       onOpenChange={(next) => !next && onClose()}
-      side="right"
+      side="center"
       title={t("inventory.countTitle")}
       description={t("inventory.countBody")}
       className="w-[min(640px,calc(100vw-1rem))]"
     >
       {open && (
-        <div className="h-[calc(100dvh-10rem)]">
+        <div className="h-[min(68dvh,640px)]">
           <Body onDone={onClose} />
         </div>
       )}

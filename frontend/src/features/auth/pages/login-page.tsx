@@ -8,6 +8,11 @@ import { RiseIn } from "@/components/motion/rise-in.tsx"
 import { Button } from "@/components/ui/button.tsx"
 import { Field, FieldError, FieldLabel } from "@/components/ui/field.tsx"
 import { Input } from "@/components/ui/input.tsx"
+import { PasswordInput } from "@/components/ui/password-input.tsx"
+import {
+  LanguageMenu,
+  ThemeSwitch,
+} from "@/features/shell/components/preferences.tsx"
 import { Spinner } from "@/components/ui/spinner.tsx"
 import { homePath } from "@/features/auth/lib/route-access.ts"
 import { loginSchema } from "@/features/auth/schemas/auth.ts"
@@ -70,7 +75,11 @@ export function LoginPage() {
         </RiseIn>
       </section>
 
-      <section className="flex items-center justify-center p-6 sm:p-10">
+      <section className="relative flex items-center justify-center p-6 sm:p-10">
+        <div className="absolute top-4 right-4 flex items-center gap-1">
+          <LanguageMenu />
+          <ThemeSwitch />
+        </div>
         <RiseIn className="w-full max-w-sm">
           <h1 className="font-heading text-3xl font-semibold tracking-tight">
             {t("auth.signInTitle")}
@@ -112,9 +121,8 @@ export function LoginPage() {
                   <FieldLabel htmlFor={field.name}>
                     {t("auth.password")}
                   </FieldLabel>
-                  <Input
+                  <PasswordInput
                     id={field.name}
-                    type="password"
                     autoComplete="current-password"
                     className="h-12 rounded-xl text-base"
                     value={field.state.value}
