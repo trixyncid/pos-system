@@ -10,22 +10,29 @@ from django.utils.translation import gettext_lazy as _
 
 from accounts.managers import UserManager
 
+username_validator = RegexValidator(
+    r"^[a-z0-9][a-z0-9._-]{2,29}$", _("3–30 lowercase letters, digits, dots, dashes or underscores.")
+)
 pin_validator = RegexValidator(r"^\d{4,6}$", _("PIN must be 4 to 6 digits."))
 
 
 class User(AbstractUser):
     """
-    A staff account. Managers and owners sign a tablet in with email and
-    password; every staff member then unlocks it with their own PIN, so each
-    order, void and payment is recorded against the person who made it.
+    A staff account. Everyone signs in with their own username and password,
+    so each order, void and payment is recorded against the person who made
+    it. Email is optional (for the owner's own records and account recovery).
     """
 
-    username = None
+    username = models.CharField(
+        _("username"),
+        max_length=30,
+        unique=True,
+        validators=[username_validator],
+        help_text=_("3–30 lowercase letters, digits, dots, dashes or underscores."),
+    )
     first_name = None
     last_name = None
 
-    # Optional: floor staff often work by PIN only. Without an email an account
-    # cannot sign a tablet in, only unlock one.
     email = models.EmailField(_("email"), unique=True, null=True, blank=True)
     full_name = models.CharField(_("full name"), max_length=150)
     # Hashed like a password. Never stored or logged as digits.
@@ -34,7 +41,7 @@ class User(AbstractUser):
     pin_locked_until = models.DateTimeField(_("PIN locked until"), null=True, blank=True, editable=False)
     updated_at = models.DateTimeField(_("updated at"), auto_now=True)
 
-    USERNAME_FIELD = "email"
+    USERNAME_FIELD = "username"
     REQUIRED_FIELDS = ["full_name"]
 
     objects = UserManager()
@@ -45,7 +52,7 @@ class User(AbstractUser):
         ordering = ("full_name",)
 
     def __str__(self):
-        return self.full_name or self.email or f"User {self.pk}"
+        return self.full_name or self.username
 
     # --- PIN -----------------------------------------------------------------
 

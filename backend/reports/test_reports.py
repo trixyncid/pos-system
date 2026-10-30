@@ -7,7 +7,7 @@ from django.utils import timezone
 from rest_framework.test import APIClient
 
 from accounts.models import GroupProfile, User
-from accounts.roles import CASHIER, MANAGER
+from accounts.roles import CASHIER, WAITER
 from accounts.services.roles import ensure_system_roles
 from audit.services import emit
 from catalog.models import Category, Product, ProductKind, RecipeLine, TaxCategory, Unit
@@ -23,7 +23,7 @@ class ReportTests(TestCase):
     def setUp(self):
         ensure_system_roles()
         self.manager = User.objects.create_user(None, full_name="Dimas")
-        self.manager.groups.add(GroupProfile.objects.get(code=MANAGER).group)
+        self.manager.groups.add(GroupProfile.objects.get(code=CASHIER).group)
         self.cashier = User.objects.create_user(None, full_name="Budi")
         self.cashier.groups.add(GroupProfile.objects.get(code=CASHIER).group)
         self.client = APIClient()
@@ -137,8 +137,10 @@ class ReportTests(TestCase):
         self.assertIn("from", too_long.data["errors"])
         self.assertIn("date", self.client.get(f"{API}reports/dashboard/?date=kemarin").data["errors"])
 
-    def test_cashier_sees_no_reports(self):
-        self.client.force_authenticate(self.cashier)
+    def test_waiter_sees_no_reports(self):
+        waiter = User.objects.create_user(None, full_name="Sari")
+        waiter.groups.add(GroupProfile.objects.get(code=WAITER).group)
+        self.client.force_authenticate(waiter)
         self.assertEqual(self.client.get(f"{API}reports/dashboard/").status_code, 403)
         self.assertEqual(self.client.get(f"{API}reports/sales/").status_code, 403)
         self.assertEqual(self.client.get(f"{API}audit/events/").status_code, 403)

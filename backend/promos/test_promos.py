@@ -7,7 +7,7 @@ from django.utils import timezone
 from rest_framework.test import APIClient
 
 from accounts.models import GroupProfile, User
-from accounts.roles import CASHIER, MANAGER
+from accounts.roles import CASHIER, WAITER
 from accounts.services.roles import ensure_system_roles
 from catalog.models import Category, Product, ProductKind
 from floor.models import Area, Table
@@ -87,7 +87,7 @@ class PromoApiTests(TestCase):
     def setUp(self):
         ensure_system_roles()
         self.manager = User.objects.create_user(None, full_name="Dimas")
-        self.manager.groups.add(GroupProfile.objects.get(code=MANAGER).group)
+        self.manager.groups.add(GroupProfile.objects.get(code=CASHIER).group)
         self.cashier = User.objects.create_user(None, full_name="Budi")
         self.cashier.groups.add(GroupProfile.objects.get(code=CASHIER).group)
         self.client = APIClient()
@@ -121,8 +121,10 @@ class PromoApiTests(TestCase):
         self.client.delete(f"{API}promos/{created['id']}/")
         self.assertFalse(Promo.objects.get(pk=created["id"]).is_active)
 
-    def test_cashier_cannot_set_up_promos(self):
-        self.client.force_authenticate(self.cashier)
+    def test_waiter_cannot_set_up_promos(self):
+        waiter = User.objects.create_user(None, full_name="Sari")
+        waiter.groups.add(GroupProfile.objects.get(code=WAITER).group)
+        self.client.force_authenticate(waiter)
         self.assertEqual(self.create().status_code, 403)
 
     def test_cashier_applies_a_promo_and_it_replaces_a_manual_discount(self):

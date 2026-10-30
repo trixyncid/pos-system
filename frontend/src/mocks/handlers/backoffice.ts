@@ -70,16 +70,15 @@ let nextRoleId = 100
 
 type StaffBody = Partial<{
   full_name: string
+  username: string
   email: string | null
   password: string
-  pin: string
   roles: number[]
   is_active: boolean
 }>
 
 function validateStaff(body: StaffBody, actor: MockStaff, target?: MockStaff) {
   const errors: Record<string, string[]> = {}
-  const email = body.email === undefined ? target?.email : body.email
   if (body.full_name !== undefined && !body.full_name.trim())
     errors.full_name = ["This field may not be blank."]
   if (
@@ -87,10 +86,21 @@ function validateStaff(body: StaffBody, actor: MockStaff, target?: MockStaff) {
     staff.some((m) => m.email === body.email?.toLowerCase() && m !== target)
   )
     errors.email = ["Another staff member uses this email."]
-  if (body.password && !email)
-    errors.password = ["Add an email first: a password is only for signing in."]
-  if (body.pin && !/^\d{4,6}$/.test(body.pin))
-    errors.pin = ["PIN must be 4 to 6 digits."]
+  if (body.username !== undefined) {
+    const username = body.username.trim().toLowerCase()
+    if (!/^[a-z0-9][a-z0-9._-]{2,29}$/.test(username))
+      errors.username = [
+        "Use 3–30 lowercase letters, numbers, dots, dashes or underscores.",
+      ]
+    else if (staff.some((m) => m.username === username && m !== target))
+      errors.username = ["Another staff member uses this username."]
+  }
+  if (!target) {
+    if (!body.username) errors.username = ["Choose a username to sign in with."]
+    if (!body.password) errors.password = ["Set a password to sign in with."]
+  }
+  if (body.password && body.password.length < 8)
+    errors.password = ["This password is too short."]
   if (target && target.id === actor.id) {
     if (body.is_active === false)
       errors.is_active = ["You cannot deactivate yourself."]
@@ -155,7 +165,8 @@ export const backofficeHandlers = [
         (m) =>
           !search ||
           m.full_name.toLowerCase().includes(search) ||
-          (m.email ?? "").includes(search)
+          (m.email ?? "").includes(search) ||
+          m.username.includes(search)
       )
       .filter((m) => active === null || String(m.is_active) === active)
       .sort(
@@ -183,9 +194,9 @@ export const backofficeHandlers = [
     const member: MockStaff = {
       id: nextStaffId++,
       full_name: body.full_name!.trim(),
+      username: body.username!.trim().toLowerCase(),
       email: body.email?.toLowerCase() || null,
       password: body.password || null,
-      pin: body.pin || null,
       is_active: body.is_active ?? true,
       roleIds: body.roles ?? [],
       last_login: null,
@@ -205,26 +216,13 @@ export const backofficeHandlers = [
     const errors = validateStaff(body, actor, target)
     if (Object.keys(errors).length) return invalid(errors)
     if (body.full_name !== undefined) target.full_name = body.full_name.trim()
+    if (body.username !== undefined)
+      target.username = body.username.trim().toLowerCase()
     if (body.email !== undefined)
       target.email = body.email?.toLowerCase() || null
     if (body.password) target.password = body.password
-    if (body.pin) target.pin = body.pin
     if (body.roles) target.roleIds = [...body.roles]
     if (body.is_active !== undefined) target.is_active = body.is_active
-    return ok(toStaffRow(target))
-  }),
-
-  http.post(apiPath("/staff/:id/set-pin/"), async ({ request, params }) => {
-    const { actor, error } = actorWith(request, perm.manageStaff)
-    if (error) return error
-    await delay()
-    const target = staff.find((m) => m.id === Number(params.id))
-    if (!target) return fail(404, "Not found.", { code: "not_found" })
-    const { pin } = (await request.json()) as { pin?: string }
-    const errors = validateStaff({ pin: pin ?? "" }, actor, target)
-    if (!pin) errors.pin = ["This field is required."]
-    if (Object.keys(errors).length) return invalid(errors)
-    target.pin = pin!
     return ok(toStaffRow(target))
   }),
 

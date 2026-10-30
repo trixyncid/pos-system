@@ -9,7 +9,6 @@ let sessionDead = false
 let refreshing: Promise<string> | null = null
 let onUnauthorized: (() => void) | null = null
 
-// PIN unlock is not here: it needs the tablet's session, so an expired token there is refreshed like any call.
 const publicAuthPaths = ["/auth/login/", "/auth/logout/"]
 
 /** Most calls answer well within a second; a hung connection should fail instead of spinning forever. */

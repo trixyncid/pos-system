@@ -1,4 +1,4 @@
-import { ChevronDownIcon, LockIcon, LogOutIcon } from "lucide-react"
+import { ChevronDownIcon, LogOutIcon } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
 import { StaffAvatar } from "@/components/pos/staff-avatar.tsx"
@@ -12,11 +12,10 @@ import {
 } from "@/components/ui/dropdown-menu.tsx"
 import { useSession } from "@/features/auth/store/session-store.ts"
 
-/** Who is on the tablet, with Lock as the first, biggest action. */
+/** Who is signed in, and Sign out. */
 export function UserMenu() {
   const { t } = useTranslation()
   const user = useSession((state) => state.user)
-  const lock = useSession((state) => state.lock)
   const signOut = useSession((state) => state.signOut)
   if (!user) return null
 
@@ -39,12 +38,11 @@ export function UserMenu() {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-60">
         <DropdownMenuLabel className="truncate">
-          {user.email ?? user.full_name}
+          {user.full_name}
+          <span className="block text-xs font-normal text-muted-foreground">
+            @{user.username}
+          </span>
         </DropdownMenuLabel>
-        <DropdownMenuItem className="h-11" onSelect={lock}>
-          <LockIcon />
-          {t("auth.lock")}
-        </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem
           className="h-11"

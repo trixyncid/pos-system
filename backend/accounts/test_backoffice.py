@@ -2,7 +2,7 @@ from django.test import TestCase
 from rest_framework.test import APIClient
 
 from accounts.models import GroupProfile, User
-from accounts.roles import CASHIER, MANAGER, OWNER, WAITER
+from accounts.roles import CASHIER, OWNER, WAITER
 from accounts.services.roles import ensure_system_roles
 from audit.models import AuditEvent
 
@@ -18,8 +18,8 @@ def role(code):
 class BackofficeTests(TestCase):
     def setUp(self):
         ensure_system_roles()
-        # The manager role gets manage_staff here so the escalation rules can be tested.
-        manager_role = role(MANAGER)
+        # Kasir gets manage_staff here so the escalation rules can be tested.
+        manager_role = role(CASHIER)
         from accounts.permission_catalog import permissions_by_name
 
         found, _ = permissions_by_name(["accounts.manage_staff"])
@@ -43,34 +43,46 @@ class BackofficeTests(TestCase):
         self.assertEqual(self.client.get(ROLES).status_code, 403)
         self.assertEqual(self.client.get(PERMISSIONS).status_code, 403)
 
-    def test_owner_creates_pin_only_staff(self):
+    def test_owner_creates_staff_with_their_own_sign_in(self):
         self.as_user(self.owner)
         with self.captureOnCommitCallbacks(execute=True):
             response = self.client.post(
-                STAFF, {"full_name": "Agus", "pin": "5555", "roles": [role(WAITER).pk]}, format="json"
+                STAFF,
+                {"full_name": "Agus", "username": "Agus", "password": "Str0ng-pass!", "roles": [role(WAITER).pk]},
+                format="json",
             )
         self.assertEqual(response.status_code, 201, response.content)
         data = response.data["data"]
-        self.assertEqual(data["email"], None)
-        self.assertTrue(data["has_pin"])
-        self.assertFalse(data["can_sign_in"])
+        self.assertEqual((data["username"], data["email"], data["can_sign_in"]), ("agus", None, True))
         self.assertEqual(data["role_names"], ["Pelayan"])
-        self.assertNotIn("pin", data)
+        self.assertNotIn("password", data)
         self.assertTrue(AuditEvent.objects.filter(action="staff.create").exists())
-        self.assertTrue(User.objects.get(pk=data["id"]).check_pin("5555"))
+        self.assertTrue(User.objects.get(pk=data["id"]).check_password("Str0ng-pass!"))
 
-    def test_password_needs_an_email(self):
+    def test_new_staff_need_a_free_username_and_a_password(self):
         self.as_user(self.owner)
-        response = self.client.post(STAFF, {"full_name": "Agus", "password": "Str0ng-pass!"}, format="json")
-        self.assertEqual(response.status_code, 400)
-        self.assertIn("password", response.data["errors"])
+        missing = self.client.post(STAFF, {"full_name": "Agus"}, format="json")
+        self.assertIn("username", missing.data["errors"])
+        no_password = self.client.post(STAFF, {"full_name": "Agus", "username": "agus"}, format="json")
+        self.assertIn("password", no_password.data["errors"])
+        taken = self.client.post(
+            STAFF, {"full_name": "Sari 2", "username": self.waiter.username, "password": "Str0ng-pass!"}, format="json"
+        )
+        self.assertIn("username", taken.data["errors"])
+        bad = self.client.post(STAFF, {"full_name": "X", "username": "a b", "password": "Str0ng-pass!"}, format="json")
+        self.assertIn("username", bad.data["errors"])
 
     def test_manager_cannot_hand_out_the_owner_role(self):
         self.as_user(self.manager)
-        response = self.client.post(STAFF, {"full_name": "X", "roles": [role(OWNER).pk]}, format="json")
+        sign_in = {"password": "Str0ng-pass!"}
+        response = self.client.post(
+            STAFF, {"full_name": "X", "username": "xx1", "roles": [role(OWNER).pk], **sign_in}, format="json"
+        )
         self.assertEqual(response.status_code, 400)
         self.assertIn("roles", response.data["errors"])
-        ok = self.client.post(STAFF, {"full_name": "Y", "roles": [role(CASHIER).pk]}, format="json")
+        ok = self.client.post(
+            STAFF, {"full_name": "Y", "username": "yy1", "roles": [role(CASHIER).pk], **sign_in}, format="json"
+        )
         self.assertEqual(ok.status_code, 201, ok.content)
 
     def test_manager_cannot_edit_or_reset_pin_of_the_owner(self):
@@ -155,7 +167,7 @@ class BackofficeTests(TestCase):
     def test_manager_cannot_remove_own_staff_access(self):
         self.as_user(self.manager)
         response = self.client.patch(
-            f"{ROLES}{role(MANAGER).pk}/", {"permissions": ["accounts.take_order"]}, format="json"
+            f"{ROLES}{role(CASHIER).pk}/", {"permissions": ["accounts.take_order"]}, format="json"
         )
         self.assertEqual(response.status_code, 400)
         self.assertIn("own access", response.data["errors"]["permissions"][0])
@@ -163,10 +175,10 @@ class BackofficeTests(TestCase):
     def test_seeding_keeps_the_owners_changes_unless_reset(self):
         from accounts.permission_catalog import permissions_by_name
 
-        cashier = role(CASHIER)
+        waiter = role(WAITER)
         found, _ = permissions_by_name(["accounts.apply_discount"])
-        cashier.permissions.add(*found)
+        waiter.permissions.add(*found)
         ensure_system_roles()
-        self.assertTrue(cashier.permissions.filter(codename="apply_discount").exists())
+        self.assertTrue(waiter.permissions.filter(codename="apply_discount").exists())
         ensure_system_roles(reset=True)
-        self.assertFalse(cashier.permissions.filter(codename="apply_discount").exists())
+        self.assertFalse(waiter.permissions.filter(codename="apply_discount").exists())

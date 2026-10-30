@@ -16,13 +16,6 @@ import {
 import { Input } from "@/components/ui/input.tsx"
 import { Skeleton } from "@/components/ui/skeleton.tsx"
 import { Spinner } from "@/components/ui/spinner.tsx"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select.tsx"
 import { Textarea } from "@/components/ui/textarea.tsx"
 import {
   useOutletQuery,
@@ -49,7 +42,6 @@ const fieldNames = [
   "cash_rounding",
   "receipt_header",
   "receipt_footer",
-  "idle_lock_minutes",
 ] as const
 
 function toForm(outlet: Outlet): SettingsForm {
@@ -63,7 +55,6 @@ function toForm(outlet: Outlet): SettingsForm {
     cash_rounding: outlet.cash_rounding,
     receipt_header: outlet.receipt_header,
     receipt_footer: outlet.receipt_footer,
-    idle_lock_minutes: outlet.idle_lock_minutes,
   }
 }
 
@@ -259,38 +250,6 @@ function SettingsEditor({ outlet }: { outlet: Outlet }) {
             t("settings.footer"),
             t("settings.footerHint")
           )}
-        </Section>
-
-        <Section title={t("settings.tablet")}>
-          <form.Field name="idle_lock_minutes">
-            {(field) => (
-              <Field>
-                <FieldLabel>{t("settings.idleLock")}</FieldLabel>
-                <Select
-                  value={String(field.state.value)}
-                  onValueChange={(value) => field.handleChange(Number(value))}
-                >
-                  <SelectTrigger
-                    size="lg"
-                    className="w-full max-w-60"
-                    aria-label={t("settings.idleLock")}
-                  >
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {[1, 3, 5, 10, 15, 30].map((minutes) => (
-                      <SelectItem key={minutes} value={String(minutes)}>
-                        {minutes} {t("settings.minutes")}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FieldDescription>
-                  {t("settings.idleLockHint")}
-                </FieldDescription>
-              </Field>
-            )}
-          </form.Field>
         </Section>
       </div>
 

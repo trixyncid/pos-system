@@ -4,7 +4,7 @@ from django.test import TestCase
 from rest_framework.test import APIClient
 
 from accounts.models import GroupProfile, User
-from accounts.roles import MANAGER, PRINT_STATION, WAITER
+from accounts.roles import CASHIER, WAITER
 from accounts.services.roles import ensure_system_roles
 from audit.models import AuditEvent
 from catalog.models import Category, ModifierGroup, Product, ProductKind
@@ -31,8 +31,8 @@ class OrderFlowTests(TestCase):
             return user
 
         self.waiter = staff("Sari", WAITER, "4444")
-        self.manager = staff("Dimas", MANAGER, "2222")
-        self.station = staff("Dapur", PRINT_STATION, "9999")
+        self.manager = staff("Dimas", CASHIER, "2222")
+        self.station = staff("Dapur", CASHIER, "9999")
         self.client = APIClient()
         self.client.force_authenticate(self.waiter)
 
@@ -205,6 +205,6 @@ class OrderFlowTests(TestCase):
         reprint = self.client.post(f"{API}printing/jobs/{job.pk}/reprint/")
         self.assertTrue(reprint.data["data"]["payload"]["reprint"])
 
-    def test_waiter_cannot_see_orders_without_take_order(self):
-        self.client.force_authenticate(self.station)
+    def test_staff_without_take_order_cannot_see_orders(self):
+        self.client.force_authenticate(User.objects.create_user(None, full_name="Tamu"))
         self.assertEqual(self.client.get(f"{API}orders/").status_code, 403)

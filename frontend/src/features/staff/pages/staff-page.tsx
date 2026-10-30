@@ -1,5 +1,4 @@
 import {
-  KeyRoundIcon,
   MoreHorizontalIcon,
   PencilIcon,
   PlusIcon,
@@ -31,7 +30,6 @@ import {
   useStaffQuery,
   type StaffListParams,
 } from "@/features/staff/api/staff.ts"
-import { PinSheet } from "@/features/staff/components/pin-sheet.tsx"
 import { StaffFormSheet } from "@/features/staff/components/staff-form-sheet.tsx"
 import type { Staff } from "@/features/staff/schemas/staff.ts"
 import { apiErrorMessage } from "@/lib/api-error.ts"
@@ -51,12 +49,10 @@ function StaffRow({
   member,
   isSelf,
   onEdit,
-  onPin,
 }: {
   member: Staff
   isSelf: boolean
   onEdit: () => void
-  onPin: () => void
 }) {
   const { t } = useTranslation()
   const setActive = useSetActive()
@@ -92,7 +88,7 @@ function StaffRow({
         <span className="min-w-0 flex-1">
           <span className="block truncate font-medium">{member.full_name}</span>
           <span className="block truncate text-sm text-muted-foreground">
-            {member.email ?? t("staff.pinOnly")}
+            @{member.username}
             {" · "}
             {member.last_login
               ? t("staff.lastSeen", {
@@ -109,11 +105,9 @@ function StaffRow({
           ))}
           {!member.is_active ? (
             <StatusPill>{t("staff.inactive")}</StatusPill>
-          ) : member.has_pin ? (
-            <StatusPill tone="success">{t("staff.pinSet")}</StatusPill>
-          ) : (
-            <StatusPill tone="warning">{t("staff.noPin")}</StatusPill>
-          )}
+          ) : !member.can_sign_in ? (
+            <StatusPill tone="warning">{t("staff.noPassword")}</StatusPill>
+          ) : null}
         </span>
       </button>
 
@@ -131,10 +125,6 @@ function StaffRow({
           <DropdownMenuItem className="h-11" onSelect={onEdit}>
             <PencilIcon />
             {t("staff.edit")}
-          </DropdownMenuItem>
-          <DropdownMenuItem className="h-11" onSelect={onPin}>
-            <KeyRoundIcon />
-            {t("staff.setPin")}
           </DropdownMenuItem>
           {!isSelf && (
             <>
@@ -161,7 +151,6 @@ export function StaffPage() {
   const [search, setSearch] = useState("")
   const [filter, setFilter] = useState<Filter>("true")
   const [editing, setEditing] = useState<Staff | null | undefined>(undefined)
-  const [pinFor, setPinFor] = useState<Staff | null>(null)
 
   const params: StaffListParams = {
     search: useDeferredValue(search.trim()) || undefined,
@@ -232,7 +221,6 @@ export function StaffPage() {
                 member={member}
                 isSelf={member.id === selfId}
                 onEdit={() => setEditing(member)}
-                onPin={() => setPinFor(member)}
               />
             ))}
           </AnimatePresence>
@@ -240,7 +228,6 @@ export function StaffPage() {
       )}
 
       <StaffFormSheet member={editing} onClose={() => setEditing(undefined)} />
-      <PinSheet member={pinFor} onClose={() => setPinFor(null)} />
     </div>
   )
 }

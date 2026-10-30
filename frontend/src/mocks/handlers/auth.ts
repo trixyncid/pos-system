@@ -1,6 +1,6 @@
 import { delay, http, HttpResponse } from "msw"
 
-import { roleName, staff, toUser } from "@/mocks/db/staff.ts"
+import { staff, toUser } from "@/mocks/db/staff.ts"
 import { apiPath, fail, ok } from "@/mocks/http.ts"
 
 /**
@@ -8,9 +8,6 @@ import { apiPath, fail, ok } from "@/mocks/http.ts"
  * reload keeps the tablet signed in, as the real cookie would.
  */
 const sessionKey = "pos.mock.session"
-const pinAttempts = new Map<number, { failed: number; lockedUntil: number }>()
-const PIN_MAX_ATTEMPTS = 5
-const PIN_LOCK_MS = 15 * 60_000
 
 function sessionUserId(): number | null {
   try {
@@ -51,17 +48,23 @@ function unauthenticated() {
 export const authHandlers = [
   http.post(apiPath("/auth/login/"), async ({ request }) => {
     await delay()
-    const body = (await request.json()) as { email?: string; password?: string }
+    const body = (await request.json()) as {
+      username?: string
+      password?: string
+    }
+    // Like the API: a username, or an email for accounts that have one.
+    const login = body.username?.trim().toLowerCase() ?? ""
     const member = staff.find(
       (item) =>
         item.is_active &&
-        item.email !== null &&
-        item.email === body.email?.trim().toLowerCase() &&
+        (login.includes("@")
+          ? item.email === login
+          : item.username === login) &&
         item.password !== null &&
         item.password === body.password
     )
     if (!member)
-      return fail(401, "Email or password is incorrect.", {
+      return fail(401, "Username or password is incorrect.", {
         code: "invalid_credentials",
       })
     return HttpResponse.json({
@@ -91,62 +94,9 @@ export const authHandlers = [
     const member = bearerStaff(request)
     return member ? ok(toUser(member)) : unauthenticated()
   }),
-
-  http.get(apiPath("/auth/lock-staff/"), async ({ request }) => {
-    await delay()
-    if (!bearerStaff(request)) return unauthenticated()
-    return ok(
-      staff
-        .filter((member) => member.is_active && member.pin !== null)
-        .map((member) => ({
-          id: member.id,
-          full_name: member.full_name,
-          role: roleName(member),
-        }))
-    )
-  }),
-
-  http.post(apiPath("/auth/pin-unlock/"), async ({ request }) => {
-    await delay()
-    if (!bearerStaff(request)) return unauthenticated()
-    const body = (await request.json()) as { user_id?: number; pin?: string }
-    const member = staff.find(
-      (item) => item.id === body.user_id && item.is_active
-    )
-    if (!member || member.pin === null)
-      return fail(403, "This staff member cannot unlock with a PIN.", {
-        code: "pin_unavailable",
-      })
-    const attempts = pinAttempts.get(member.id) ?? { failed: 0, lockedUntil: 0 }
-    const locked = () =>
-      fail(403, "Too many wrong PINs. Ask a manager or try again later.", {
-        code: "pin_locked",
-      })
-    if (attempts.lockedUntil > Date.now()) return locked()
-    if (body.pin !== member.pin) {
-      attempts.failed += 1
-      if (attempts.failed >= PIN_MAX_ATTEMPTS) {
-        pinAttempts.set(member.id, {
-          failed: 0,
-          lockedUntil: Date.now() + PIN_LOCK_MS,
-        })
-        return locked()
-      }
-      pinAttempts.set(member.id, attempts)
-      return fail(403, "PIN is incorrect.", { code: "pin_incorrect" })
-    }
-    pinAttempts.delete(member.id)
-    return HttpResponse.json({
-      success: true,
-      access: issue(member.id),
-      expires_in: 900,
-      user: toUser(member),
-    })
-  }),
 ]
 
-/** Test helper: forget the mock session and PIN counters. */
+/** Test helper: forget the mock session. */
 export function resetMockAuth() {
   setSessionUser(null)
-  pinAttempts.clear()
 }

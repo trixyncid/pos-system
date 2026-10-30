@@ -17,9 +17,7 @@ import { connect, type ConnectionState } from "@/realtime/socket.ts"
 export function useRealtime() {
   const queryClient = useQueryClient()
   const user = useSession((state) => state.user)
-  const active = useSession(
-    (state) => state.status === "active" || state.status === "locked"
-  )
+  const active = useSession((state) => state.status === "active")
   const [state, setState] = useState<ConnectionState>(
     env.useMocks ? "open" : "closed"
   )

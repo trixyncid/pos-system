@@ -30,7 +30,7 @@ const loginRoute = createRoute({
   beforeLoad: async () => {
     await useSession.getState().hydrate()
     const { status, user } = useSession.getState()
-    if (status === "active" || status === "locked")
+    if (status === "active")
       throw redirect({ to: homePath(user), replace: true })
   },
   component: lazyRouteComponent(

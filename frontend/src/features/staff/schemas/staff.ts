@@ -3,12 +3,12 @@ import { z } from "zod"
 export const staffSchema = z.object({
   id: z.number(),
   full_name: z.string(),
+  username: z.string(),
   email: z.string().nullable(),
   is_active: z.boolean(),
   roles: z.array(z.number()),
   role_names: z.array(z.string()),
-  has_pin: z.boolean(),
-  /** Has email and password, so can sign a tablet in (not only unlock one). */
+  /** Has a password set, so can sign in. */
   can_sign_in: z.boolean(),
   last_login: z.string().nullable(),
   date_joined: z.string(),
@@ -23,29 +23,34 @@ export const staffPageSchema = z.object({
   results: z.array(staffSchema),
 })
 
-const pinPattern = /^\d{4,6}$/
+export const usernamePattern = /^[a-z0-9][a-z0-9._-]{2,29}$/
 
-/** The staff form. Empty strings mean "leave as is" for password and PIN. */
-export const staffFormSchema = z
-  .object({
-    full_name: z.string().trim().min(1, "Nama wajib diisi."),
-    email: z.union([z.literal(""), z.email("Masukkan email yang benar.")]),
-    password: z.union([
-      z.literal(""),
-      z.string().min(8, "Minimal 8 karakter."),
-    ]),
-    pin: z.union([
-      z.literal(""),
-      z.string().regex(pinPattern, "PIN 4–6 angka."),
-    ]),
-    roles: z.array(z.number()),
-    is_active: z.boolean(),
-  })
-  .refine((value) => !value.password || value.email, {
-    path: ["password"],
-    message: "Isi email dulu: kata sandi hanya untuk masuk ke tablet.",
-  })
+/**
+ * The staff form. Everyone signs in with their own username and password; a
+ * new account needs both, and an empty password on an existing one means
+ * "leave it as is".
+ */
+export function staffFormSchema(isNew: boolean) {
+  return z
+    .object({
+      full_name: z.string().trim().min(1, "Nama wajib diisi."),
+      username: z
+        .string()
+        .trim()
+        .toLowerCase()
+        .regex(usernamePattern, "3–30 huruf kecil, angka, titik, - atau _."),
+      email: z.union([z.literal(""), z.email("Masukkan email yang benar.")]),
+      password: z.union([
+        z.literal(""),
+        z.string().min(8, "Minimal 8 karakter."),
+      ]),
+      roles: z.array(z.number()),
+      is_active: z.boolean(),
+    })
+    .refine((value) => !isNew || value.password, {
+      path: ["password"],
+      message: "Buat kata sandi untuk masuk.",
+    })
+}
 
-export type StaffForm = z.infer<typeof staffFormSchema>
-
-export const pinSchema = z.string().regex(pinPattern, "PIN 4–6 angka.")
+export type StaffForm = z.infer<ReturnType<typeof staffFormSchema>>

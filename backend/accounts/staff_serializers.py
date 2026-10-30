@@ -3,7 +3,7 @@ from django.contrib.auth.password_validation import validate_password
 from django.db import transaction
 from rest_framework import serializers
 
-from accounts.models import GroupProfile, User, pin_validator
+from accounts.models import GroupProfile, User, pin_validator, username_validator
 from accounts.permission_catalog import assignable_permissions, codename_of, permissions_by_name
 from accounts.services import access
 from accounts.services.tokens import revoke_sessions
@@ -118,6 +118,7 @@ class StaffSerializer(serializers.ModelSerializer):
         fields = (
             "id",
             "full_name",
+            "username",
             "email",
             "is_active",
             "roles",
@@ -130,14 +131,28 @@ class StaffSerializer(serializers.ModelSerializer):
             "pin",
         )
         read_only_fields = ("last_login", "date_joined")
-        extra_kwargs = {"email": {"required": False, "allow_null": True}}
+        extra_kwargs = {
+            "email": {"required": False, "allow_null": True},
+            # Unique and lowercase; checked in validate_username so the message is ours.
+            "username": {"required": False, "validators": []},
+        }
 
     def get_role_names(self, user) -> list[str]:
         return [group.name for group in user.groups.all()]
 
     def get_can_sign_in(self, user) -> bool:
-        """Email and password set: this account can sign a tablet in, not only unlock one."""
-        return bool(user.email) and user.has_usable_password()
+        """A password is set: this account can sign in."""
+        return user.has_usable_password()
+
+    def validate_username(self, username):
+        username = username.strip().lower()
+        username_validator(username)
+        clash = User.objects.filter(username__iexact=username)
+        if self.instance:
+            clash = clash.exclude(pk=self.instance.pk)
+        if clash.exists():
+            raise serializers.ValidationError("Another staff member uses this username.")
+        return username
 
     def validate_email(self, email):
         if not email:
@@ -157,13 +172,13 @@ class StaffSerializer(serializers.ModelSerializer):
 
     def validate(self, attrs):
         actor = self.context["request"].user
-        email = attrs.get("email", getattr(self.instance, "email", None))
         password = attrs.get("password")
+        if self.instance is None:
+            if not attrs.get("username"):
+                raise serializers.ValidationError({"username": ["Choose a username to sign in with."]})
+            if not password:
+                raise serializers.ValidationError({"password": ["Set a password to sign in with."]})
         if password:
-            if not email:
-                raise serializers.ValidationError(
-                    {"password": ["Add an email first: a password is only for signing in."]}
-                )
             validate_password(password)
         if self.instance is not None and self.instance.pk == actor.pk:
             if attrs.get("is_active") is False:

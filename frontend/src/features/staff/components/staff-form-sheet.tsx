@@ -30,9 +30,9 @@ import { cn } from "@/lib/utils.ts"
 
 const serverFields = [
   "full_name",
+  "username",
   "email",
   "password",
-  "pin",
   "roles",
   "is_active",
 ] as const
@@ -59,13 +59,13 @@ function Editor({
   const form = useForm({
     defaultValues: {
       full_name: member?.full_name ?? "",
+      username: member?.username ?? "",
       email: member?.email ?? "",
       password: "",
-      pin: "",
       roles: member?.roles ?? [],
       is_active: member?.is_active ?? true,
     } satisfies StaffForm as StaffForm,
-    validators: { onSubmit: staffFormSchema },
+    validators: { onSubmit: staffFormSchema(isNew) },
     onSubmit: async ({ value, formApi }) => {
       try {
         const saved = await save.mutateAsync({ id: member?.id, form: value })
@@ -81,11 +81,10 @@ function Editor({
       }
     },
   })
-  const email = useStore(form.store, (state) => state.values.email)
   const submitting = useStore(form.store, (state) => state.isSubmitting)
 
   const input = (
-    name: "full_name" | "email" | "password" | "pin",
+    name: "full_name" | "username" | "email" | "password",
     label: string,
     props: React.ComponentProps<typeof Input>,
     hint?: string
@@ -103,7 +102,6 @@ function Editor({
               onChange={(event) => field.handleChange(event.target.value)}
               aria-invalid={field.state.meta.errors.length > 0}
               {...withoutType(props)}
-              wrapperClassName={name === "pin" ? "w-48" : undefined}
             />
           ) : (
             <Input
@@ -134,31 +132,27 @@ function Editor({
       }}
     >
       {input("full_name", t("staff.fullName"), { autoComplete: "off" })}
+      {input(
+        "username",
+        t("staff.username"),
+        {
+          autoComplete: "off",
+          autoCapitalize: "none",
+          spellCheck: false,
+        },
+        t("staff.usernameHint")
+      )}
+      {input(
+        "password",
+        t("staff.password"),
+        { type: "password", autoComplete: "new-password" },
+        isNew ? t("staff.passwordHintNew") : t("staff.passwordHint")
+      )}
       {input("email", t("staff.email"), {
         type: "email",
         inputMode: "email",
         autoComplete: "off",
       })}
-      {email.trim() !== "" &&
-        input(
-          "password",
-          t("staff.password"),
-          { type: "password", autoComplete: "new-password" },
-          t("staff.passwordHint")
-        )}
-      {isNew &&
-        input(
-          "pin",
-          t("staff.pin"),
-          {
-            type: "password",
-            inputMode: "numeric",
-            maxLength: 6,
-            autoComplete: "off",
-            className: "h-12 rounded-xl text-base tracking-[0.4em]",
-          },
-          t("staff.pinHint")
-        )}
 
       <form.Field name="roles">
         {(field) => (

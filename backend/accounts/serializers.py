@@ -2,7 +2,8 @@ from rest_framework import serializers
 
 
 class LoginSerializer(serializers.Serializer):
-    email = serializers.EmailField()
+    # A username; an email also works, for accounts that have one.
+    username = serializers.CharField(max_length=150)
     password = serializers.CharField(trim_whitespace=False)
 
 
@@ -23,6 +24,7 @@ def user_payload(user) -> dict:
     return {
         "id": user.pk,
         "email": user.email,
+        "username": user.username,
         "full_name": user.full_name,
         "has_pin": user.has_pin,
         "is_superuser": user.is_superuser,

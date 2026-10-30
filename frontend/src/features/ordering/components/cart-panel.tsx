@@ -14,6 +14,8 @@ import { useTranslation } from "react-i18next"
 import { MoneyText } from "@/components/pos/money-text.tsx"
 import { Button } from "@/components/ui/button.tsx"
 import { Spinner } from "@/components/ui/spinner.tsx"
+import { useCan, useCanAny } from "@/features/auth/hooks/use-can.ts"
+import { perm } from "@/features/auth/lib/permissions.ts"
 import { CartLine } from "@/features/ordering/components/cart-line.tsx"
 import { discountLabel } from "@/features/checkout/lib/discount-label.ts"
 import { useLanded } from "@/features/ordering/components/fly-to-cart.tsx"
@@ -125,6 +127,9 @@ export function CartPanel({
   printingBill: boolean
 }) {
   const { t } = useTranslation()
+  // A waiter can't void what the kitchen has, or discount a bill.
+  const canVoidSent = useCan(perm.voidSentItem)
+  const canDiscount = useCanAny([perm.applyDiscount, perm.takePayment])
   const rules = useBillRules()
   const landed = useLanded()
   const [justSent, setJustSent] = useState(false)
@@ -280,7 +285,7 @@ export function CartPanel({
                 seat={line.seat}
                 total={line.total}
                 tone="sent"
-                onSwipe={() => onVoid(line)}
+                onSwipe={canVoidSent ? () => onVoid(line) : undefined}
                 swipeLabel={t("order.swipeVoid")}
               />
             ))}
@@ -333,16 +338,18 @@ export function CartPanel({
         </div>
         {sent.length > 0 && drafts.length === 0 && (
           <div className="flex gap-2">
-            <Button
-              variant="secondary"
-              size="touch"
-              className="flex-1"
-              disabled={order.payments.length > 0}
-              onClick={onDiscount}
-            >
-              <PercentIcon />
-              {t("order.discount")}
-            </Button>
+            {canDiscount && (
+              <Button
+                variant="secondary"
+                size="touch"
+                className="flex-1"
+                disabled={order.payments.length > 0}
+                onClick={onDiscount}
+              >
+                <PercentIcon />
+                {t("order.discount")}
+              </Button>
+            )}
             {onPrintBill && (
               <Button
                 variant="secondary"

@@ -9,8 +9,8 @@ export const roleSchema = z.object({
 export const userSchema = z.object({
   id: z.number(),
   email: z.string().nullable(),
+  username: z.string(),
   full_name: z.string(),
-  has_pin: z.boolean(),
   is_superuser: z.boolean(),
   roles: z.array(roleSchema),
   /** "app_label.codename" strings, or ["*"] for an account with every permission. */
@@ -24,17 +24,8 @@ export const sessionSchema = z.object({
   user: userSchema,
 })
 
-/** A staff tile on the lock screen. */
-export const lockStaffSchema = z.object({
-  id: z.number(),
-  full_name: z.string(),
-  role: z.string(),
-})
-
-export type LockStaff = z.infer<typeof lockStaffSchema>
-
 export const loginSchema = z.object({
-  email: z.email("Masukkan email yang benar."),
+  username: z.string().trim().min(1, "Masukkan username."),
   password: z.string().min(1, "Masukkan kata sandi."),
 })
 

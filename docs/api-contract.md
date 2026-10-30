@@ -26,14 +26,12 @@ The web app sends `X-Session-Cookie: 1`, so the refresh token lives in an httpOn
 
 | Method | Path | Body | Response |
 |---|---|---|---|
-| POST | `/auth/login/` | `{ email, password }` | `{ success, access, expires_in, user }` and the refresh cookie |
-| POST | `/auth/pin-unlock/` | `{ user_id, pin }` (needs a signed-in tablet) | Same as login, for that staff member. A wrong PIN gives 403 with `code` set to `pin_incorrect`, `pin_locked` or `pin_unavailable` |
+| POST | `/auth/login/` | `{ username, password }` | `{ success, access, expires_in, user }` and the refresh cookie. `username` is case-insensitive and may also be the account's email. A wrong pair gives 401 `invalid_credentials` |
 | POST | `/auth/refresh/` | none (cookie) | `{ success, access }` and a rotated cookie |
 | POST | `/auth/logout/` | none (cookie) | `{ success }`, with the cookie cleared and the token blacklisted |
 | GET | `/auth/me/` | none | `{ success, data: user }` |
-| GET | `/auth/lock-staff/` | none (needs a signed-in tablet) | `{ success, data: [{ id, full_name, role }] }`: active staff who have a PIN, for the lock screen |
 
-`user`: `{ id, email, full_name, has_pin, is_superuser, roles: [{id, code, name}], permissions: ["accounts.take_order", ...] | ["*"] }`
+`user`: `{ id, username, email, full_name, has_pin, is_superuser, roles: [{id, code, name}], permissions: ["accounts.take_order", ...] | ["*"] }`
 
 ## Implemented
 
@@ -45,9 +43,9 @@ The web app sends `X-Session-Cookie: 1`, so the refresh token lives in an httpOn
 | GET | `/roles/` | `accounts.manage_staff` | `[{ id, name, code, description, is_system, permissions: [codename], member_count }]`, not paginated |
 | POST / PATCH | `/roles/`, `/roles/{id}/` | `accounts.manage_staff` | `{ name, code, description, permissions: [codename] }`. A built-in role keeps its code; the Owner role's permissions are fixed |
 | DELETE | `/roles/{id}/` | `accounts.manage_staff` | Only a non-built-in role with no active staff |
-| GET | `/staff/?search=&active=true\|false&page=` | `accounts.manage_staff` | Paginated `{ id, full_name, email\|null, is_active, roles: [id], role_names, has_pin, can_sign_in, last_login, date_joined }` |
-| POST / PATCH | `/staff/`, `/staff/{id}/` | `accounts.manage_staff` | `{ full_name, email?, password?, pin?, roles: [id], is_active }`. Email is optional (PIN-only staff); a password needs an email. No delete: deactivate instead, which signs the account out everywhere |
-| POST | `/staff/{id}/set-pin/` | `accounts.manage_staff` | `{ pin }` (4–6 digits) |
+| GET | `/staff/?search=&active=true\|false&page=` | `accounts.manage_staff` | Paginated `{ id, full_name, username, email\|null, is_active, roles: [id], role_names, has_pin, can_sign_in, last_login, date_joined }` |
+| POST / PATCH | `/staff/`, `/staff/{id}/` | `accounts.manage_staff` | `{ full_name, username, email?, password?, pin?, roles: [id], is_active }`. A new account needs a unique `username` (3–30 of `a-z 0-9 . _ -`) and a `password`; email is optional. No delete: deactivate instead, which signs the account out everywhere |
+| POST | `/staff/{id}/set-pin/` | `accounts.manage_staff` | `{ pin }` (4–6 digits): an approval PIN for custom roles; the app no longer uses it |
 
 ### Catalog (`/catalog/`)
 

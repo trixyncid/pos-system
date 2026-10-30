@@ -6,7 +6,7 @@ import { useSession } from "@/features/auth/store/session-store.ts"
 
 export function ForbiddenPage() {
   const { t } = useTranslation()
-  const lock = useSession((state) => state.lock)
+  const signOut = useSession((state) => state.signOut)
   return (
     <main className="grid min-h-dvh place-items-center bg-canvas p-6 text-center">
       <div className="max-w-sm space-y-4">
@@ -17,8 +17,8 @@ export function ForbiddenPage() {
           {t("errors.forbiddenTitle")}
         </h1>
         <p className="text-muted-foreground">{t("errors.forbiddenBody")}</p>
-        <Button size="touch" onClick={lock}>
-          {t("auth.changeStaff")}
+        <Button size="touch" onClick={() => void signOut()}>
+          {t("auth.switchAccount")}
         </Button>
       </div>
     </main>

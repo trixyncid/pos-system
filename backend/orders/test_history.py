@@ -5,7 +5,7 @@ from django.test import TestCase
 from rest_framework.test import APIClient
 
 from accounts.models import GroupProfile, User
-from accounts.roles import CASHIER, MANAGER, WAITER
+from accounts.roles import CASHIER, WAITER
 from accounts.services.roles import ensure_system_roles
 from audit.models import AuditEvent
 from catalog.models import Category, Product, ProductKind, TaxCategory
@@ -35,7 +35,7 @@ class OrderHistoryTests(TestCase):
             return user
 
         self.cashier = staff("Budi", CASHIER, "3333")
-        self.manager = staff("Dimas", MANAGER, "2222")
+        self.manager = staff("Dimas", CASHIER, "2222")
         self.waiter = staff("Sari", WAITER, "4444")
         self.client = APIClient()
         self.client.force_authenticate(self.cashier)
@@ -110,24 +110,22 @@ class OrderHistoryTests(TestCase):
         self.assertEqual(self.history(f"?search=%23{restaurant['number']}")["count"], 1)
         self.assertEqual(self.history("?from=2020-01-01&to=2020-01-02")["count"], 0)
 
-    def test_only_the_back_office_reads_the_order_list(self):
-        for user in (self.waiter, self.cashier):
-            self.client.force_authenticate(user)
-            self.assertEqual(self.client.get(f"{API}orders/history/").status_code, 403)
+    def test_a_waiter_cannot_read_the_order_list(self):
+        self.client.force_authenticate(self.waiter)
+        self.assertEqual(self.client.get(f"{API}orders/history/").status_code, 403)
 
-    def test_refund_needs_a_manager_and_takes_cash_and_stock_back(self):
+    def test_kasir_refunds_and_it_takes_cash_and_stock_back(self):
         sale_id = self.sale(quantity=2)
         url = f"{API}orders/{sale_id}/refund/"
-        self.assertEqual(
-            self.client.post(url, {"reason": "Salah barang"}, format="json").data["code"], "approval_required"
-        )
+        self.client.force_authenticate(self.waiter)
+        self.assertEqual(self.client.post(url, {"reason": "Salah barang"}, format="json").status_code, 403)
+        # Kasir can void sent items, so a refund needs no one else's approval.
+        self.client.force_authenticate(self.cashier)
         with self.captureOnCommitCallbacks(execute=True):
-            response = self.client.post(
-                url, {"reason": "Salah barang", "approver": self.manager.pk, "approver_pin": "2222"}, format="json"
-            )
+            response = self.client.post(url, {"reason": "Salah barang"}, format="json")
         self.assertEqual(response.status_code, 200, response.content)
         data = response.data["data"]
-        self.assertEqual((data["status"], data["refund_approved_by_name"]), (OrderStatus.REFUNDED, "Dimas"))
+        self.assertEqual((data["status"], data["refund_approved_by_name"]), (OrderStatus.REFUNDED, "Budi"))
         totals = Shift.objects.get(closed_at__isnull=True).totals()
         self.assertEqual((totals["refunds"], totals["expected_cash"]), (20_000, 100_000))
         self.chips.refresh_from_db()

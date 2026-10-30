@@ -10,7 +10,6 @@ import {
   staffSchema,
   type StaffForm,
 } from "@/features/staff/schemas/staff.ts"
-import { authKeys } from "@/features/auth/api/auth.ts"
 import { roleKeys } from "@/features/roles/api/roles.ts"
 import { api } from "@/lib/api.ts"
 
@@ -34,12 +33,11 @@ export async function listStaff(params: StaffListParams, signal?: AbortSignal) {
   return staffPageSchema.parse(data)
 }
 
-/** Only the fields the user filled are sent: blank password and PIN mean "unchanged". */
+/** Only the fields the user filled are sent: a blank password means "unchanged". */
 function payload(form: Partial<StaffForm>) {
   const body: Record<string, unknown> = { ...form }
   if (body.email === "") body.email = null
   if (!body.password) delete body.password
-  if (!body.pin) delete body.pin
   return body
 }
 
@@ -56,13 +54,6 @@ async function updateStaff(id: number, form: Partial<StaffForm>) {
   return staffSchema.parse(data.data)
 }
 
-async function setPin(id: number, pin: string) {
-  const { data } = await api.post<{ data: unknown }>(`/staff/${id}/set-pin/`, {
-    pin,
-  })
-  return staffSchema.parse(data.data)
-}
-
 export function useStaffQuery(params: StaffListParams) {
   return useQuery({
     queryKey: staffKeys.list(params),
@@ -71,13 +62,12 @@ export function useStaffQuery(params: StaffListParams) {
   })
 }
 
-/** Any staff change can change who appears on the lock screen and how many staff each role has. */
+/** Any staff change can change how many staff each role has. */
 function useInvalidateStaff() {
   const queryClient = useQueryClient()
   return () =>
     Promise.all([
       queryClient.invalidateQueries({ queryKey: staffKeys.all }),
-      queryClient.invalidateQueries({ queryKey: authKeys.lockStaff() }),
       queryClient.invalidateQueries({ queryKey: roleKeys.all }),
     ])
 }
@@ -99,14 +89,5 @@ export function useSetActive() {
     mutationFn: ({ id, is_active }: { id: number; is_active: boolean }) =>
       updateStaff(id, { is_active }),
     onSuccess: invalidate,
-  })
-}
-
-export function useSetPin() {
-  const invalidate = useInvalidateStaff()
-  return useMutation({
-    mutationFn: ({ id, pin }: { id: number; pin: string }) => setPin(id, pin),
-    onSuccess: invalidate,
-    meta: { silent: true },
   })
 }

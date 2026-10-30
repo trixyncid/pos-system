@@ -2,7 +2,7 @@ from django.test import TestCase
 from rest_framework.test import APIClient
 
 from accounts.models import GroupProfile, User
-from accounts.roles import MANAGER, WAITER
+from accounts.roles import CASHIER, WAITER
 from accounts.services.roles import ensure_system_roles
 from floor.models import Area, Table
 
@@ -17,7 +17,7 @@ class FloorTests(TestCase):
     def setUp(self):
         ensure_system_roles()
         self.manager = User.objects.create_user("manager@example.com", "Str0ng-pass!", full_name="Dimas")
-        self.manager.groups.add(GroupProfile.objects.get(code=MANAGER).group)
+        self.manager.groups.add(GroupProfile.objects.get(code=CASHIER).group)
         self.waiter = User.objects.create_user(None, full_name="Sari")
         self.waiter.groups.add(GroupProfile.objects.get(code=WAITER).group)
         self.client = APIClient()

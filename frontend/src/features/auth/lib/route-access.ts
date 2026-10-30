@@ -28,7 +28,7 @@ export function visiblePages(user: User | null | undefined, shell?: Shell) {
   )
 }
 
-/** Where a user lands after sign-in or unlock: their first POS screen, else their first back-office screen. */
+/** Where a user lands after sign-in: their first POS screen, else their first back-office screen. */
 export function homePath(user: User | null | undefined) {
   return (
     visiblePages(user, "pos")[0]?.path ??

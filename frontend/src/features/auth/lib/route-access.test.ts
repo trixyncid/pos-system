@@ -9,9 +9,9 @@ import type { User } from "@/features/auth/schemas/auth.ts"
 function user(permissions: string[], overrides: Partial<User> = {}): User {
   return {
     id: 1,
+    username: "x",
     email: "x@example.com",
     full_name: "X",
-    has_pin: true,
     is_superuser: false,
     roles: [],
     permissions,

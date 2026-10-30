@@ -1,7 +1,6 @@
 """Sign-in with email and password, PIN unlock on a signed-in tablet, refresh, logout and the current user."""
 
 from django.conf import settings
-from django.contrib.auth import authenticate
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema
 from rest_framework.exceptions import AuthenticationFailed
@@ -14,7 +13,7 @@ from rest_framework_simplejwt.serializers import TokenRefreshSerializer
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from accounts.models import User
-from accounts.serializers import LoginSerializer, PinUnlockSerializer, RefreshSerializer, user_payload
+from accounts.serializers import LoginSerializer, RefreshSerializer, user_payload
 from accounts.services.tokens import issue_pair
 from accounts.session_cookie import (
     clear_refresh_cookie,
@@ -24,7 +23,7 @@ from accounts.session_cookie import (
     trusted_origin,
     wants_cookie,
 )
-from accounts.throttles import AuthRateThrottle, PinRateThrottle
+from accounts.throttles import AuthRateThrottle
 from audit.services import emit
 from common.responses import ok
 
@@ -63,41 +62,15 @@ class LoginView(APIView):
     def post(self, request):
         serializer = LoginSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        email = serializer.validated_data["email"].lower()
-        user = authenticate(request, email=email, password=serializer.validated_data["password"])
-        if user is None or not user.is_active:
-            emit(request, "auth.login_failed", metadata={"email": email})
-            return _fail(401, "Email or password is incorrect.", "invalid_credentials")
+        name = serializer.validated_data["username"].strip().lower()
+        lookup = {"email__iexact": name} if "@" in name else {"username__iexact": name}
+        user = User.objects.filter(**lookup).first()
+        # check_password runs even for an unknown name, so timing doesn't reveal which accounts exist.
+        valid = (user or User()).check_password(serializer.validated_data["password"])
+        if user is None or not valid or not user.is_active:
+            emit(request, "auth.login_failed", metadata={"username": name})
+            return _fail(401, "Username or password is incorrect.", "invalid_credentials")
         emit(request, "auth.login", actor=user)
-        return session_response(request, auth_payload(user))
-
-
-class PinUnlockView(APIView):
-    """
-    Hands a signed-in tablet to another staff member. The tablet must already
-    hold a session (a manager signed it in); the PIN then picks who is using it.
-    A wrong PIN answers 403, not 401, so the client never mistakes it for an
-    expired session.
-    """
-
-    permission_classes = [IsAuthenticated]
-    throttle_classes = [PinRateThrottle]
-
-    @extend_schema(request=PinUnlockSerializer, responses=OpenApiTypes.OBJECT)
-    def post(self, request):
-        serializer = PinUnlockSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        user = User.objects.filter(pk=serializer.validated_data["user_id"], is_active=True).first()
-        if user is None or not user.has_pin:
-            return _fail(403, "This staff member cannot unlock with a PIN.", "pin_unavailable")
-        if user.pin_locked():
-            return _fail(403, "Too many wrong PINs. Ask a manager or try again later.", "pin_locked")
-        if not user.check_pin(serializer.validated_data["pin"]):
-            emit(request, "auth.pin_failed", target=user)
-            if user.pin_locked():
-                return _fail(403, "Too many wrong PINs. Ask a manager or try again later.", "pin_locked")
-            return _fail(403, "PIN is incorrect.", "pin_incorrect")
-        emit(request, "auth.pin_unlock", actor=user)
         return session_response(request, auth_payload(user))
 
 
@@ -164,30 +137,6 @@ class MeView(APIView):
     @extend_schema(responses=OpenApiTypes.OBJECT)
     def get(self, request):
         return ok(user_payload(request.user))
-
-
-class LockStaffView(APIView):
-    """
-    The staff tiles on a locked tablet: active users who have a PIN. Only
-    names and role names, never emails, so a passer-by learns nothing more
-    than the rota on the wall.
-    """
-
-    permission_classes = [IsAuthenticated]
-
-    @extend_schema(responses=OpenApiTypes.OBJECT)
-    def get(self, request):
-        users = User.objects.filter(is_active=True).exclude(pin_hash="").prefetch_related("groups")
-        return ok(
-            [
-                {
-                    "id": user.pk,
-                    "full_name": user.full_name,
-                    "role": ", ".join(group.name for group in user.groups.all()),
-                }
-                for user in users
-            ]
-        )
 
 
 class ApproversView(APIView):

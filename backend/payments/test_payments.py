@@ -4,7 +4,7 @@ from django.test import TestCase
 from rest_framework.test import APIClient
 
 from accounts.models import GroupProfile, User
-from accounts.roles import CASHIER, MANAGER, WAITER
+from accounts.roles import CASHIER, WAITER
 from accounts.services.roles import ensure_system_roles
 from audit.models import AuditEvent
 from catalog.models import Category, Product, ProductKind
@@ -53,7 +53,7 @@ class CheckoutTests(TestCase):
 
         self.waiter = staff("Sari", WAITER, "4444")
         self.cashier = staff("Rina", CASHIER, "3333")
-        self.manager = staff("Dimas", MANAGER, "2222")
+        self.manager = staff("Dimas", CASHIER, "2222")
         self.client = APIClient()
         self.client.force_authenticate(self.cashier)
 
@@ -204,7 +204,7 @@ class ShiftTests(TestCase):
         self.cashier = User.objects.create_user(None, full_name="Rina")
         self.cashier.groups.add(GroupProfile.objects.get(code=CASHIER).group)
         self.manager = User.objects.create_user(None, full_name="Dimas")
-        self.manager.groups.add(GroupProfile.objects.get(code=MANAGER).group)
+        self.manager.groups.add(GroupProfile.objects.get(code=CASHIER).group)
         self.waiter = User.objects.create_user(None, full_name="Sari")
         self.waiter.groups.add(GroupProfile.objects.get(code=WAITER).group)
         self.client = APIClient()
@@ -227,8 +227,9 @@ class ShiftTests(TestCase):
     def test_cash_movements_and_close_with_variance(self):
         shift = self.client.post(f"{API}shifts/", {"opening_cash": 100_000}, format="json").data["data"]
         url = f"{API}shifts/{shift['id']}/"
-        # Cashiers have no open_drawer; the manager moves cash.
+        # A waiter has no open_drawer; the kasir moves cash.
         body = {"kind": "out", "amount": 20_000, "reason": "Beli es batu"}
+        self.client.force_authenticate(self.waiter)
         self.assertEqual(self.client.post(f"{url}movements/", body, format="json").status_code, 403)
         self.client.force_authenticate(self.manager)
         too_much = {"kind": "out", "amount": 500_000, "reason": "x"}

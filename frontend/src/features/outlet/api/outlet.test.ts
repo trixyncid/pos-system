@@ -6,7 +6,7 @@ describe("getOutlet", () => {
   it("reads the outlet through the mocked API and validates it", async () => {
     await useSession
       .getState()
-      .signIn({ email: "manager@warungsenja.test", password: "demo1234" })
+      .signIn({ username: "dimas", password: "demo1234" })
     await expect(getOutlet()).resolves.toEqual(outlet)
   })
 })

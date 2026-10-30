@@ -1,6 +1,6 @@
 # Permissions
 
-Ported from yanksandbrits, with two changes. Checks are by permission only, never by role code. PINs are stored hashed.
+Ported from yanksandbrits, with two changes. Checks are by permission only, never by role code. Every staff member has their own account (username and password).
 
 - **Role** = a Django `Group` plus a `GroupProfile` (`code`, `description`, `is_system`).
 - **Action** = a Django permission. POS actions live on the `accounts.PosAccess` proxy model (`backend/accounts/models.py`), so their full names are `accounts.<codename>`.
@@ -15,7 +15,7 @@ Ported from yanksandbrits, with two changes. Checks are by permission only, neve
 
 - A role can only be given permissions the editor holds.
 - Staff can only be given roles that do nothing beyond the editor's own permissions.
-- Nobody can edit, or reset the PIN of, someone whose roles go beyond their own.
+- Nobody can edit someone whose roles go beyond their own.
 - Nobody can deactivate themselves, change their own roles, or edit their own role so they lose `manage_staff`.
 - The Owner role's permissions cannot be edited: it always has the whole catalog, so the outlet can never be locked out.
 
@@ -43,14 +43,17 @@ Ported from yanksandbrits, with two changes. Checks are by permission only, neve
 | Code | Name | Actions |
 |---|---|---|
 | `owner` | Owner | All catalog permissions |
-| `manager` | Manager | Everything except `manage_staff`, `manage_settings`, `print_station` |
-| `cashier` | Kasir | take_order, take_payment, reprint, open_shift, close_shift |
+| `cashier` | Kasir | Runs the day, so also the manager: everything except `manage_staff` and `manage_settings` |
 | `waiter` | Pelayan | take_order |
-| `print-station` | Print Station | print_station, reprint |
-| `inventory` | Gudang | manage_stock |
 
-## Shared tablets
+Migration `accounts.0005_three_roles` moves members of the retired Manager, Print Station and Gudang roles into Kasir and deletes those roles.
 
-1. A manager signs the tablet in with email and password.
-2. Staff then unlock it with `POST /auth/pin-unlock/ { user_id, pin }`. The tablet's session is swapped for theirs, so every action is recorded against the person who did it.
-3. After `PIN_MAX_ATTEMPTS` wrong PINs, that user's PIN is locked for `PIN_LOCK_MINUTES`.
+A Pelayan cannot void a sent item or discount a bill; the order screen hides those controls. Owner and Kasir hold `approve_override`, so they never need someone else's approval.
+
+## Signing in
+
+1. Each staff member signs in with their own username and password (`POST /auth/login/`). An email also works for accounts that have one.
+2. There is no lock screen or idle lock: a tablet stays signed in as that person until they sign out. To hand a tablet over, sign out and the next person signs in.
+3. Every action is recorded against whoever is signed in.
+
+Approval PINs (`set-pin`, `approver_pin`) remain in the API for custom roles that need someone to approve, but the app no longer sets or asks for them.

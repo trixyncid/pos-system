@@ -23,8 +23,9 @@ import { fieldErrors } from "@/lib/form-errors.ts"
 import { applyServerErrors } from "@/lib/form-server-errors.ts"
 
 const demoAccounts = [
-  { label: "Owner", email: "owner@warungsenja.test" },
-  { label: "Manager", email: "manager@warungsenja.test" },
+  { label: "Owner", username: "rina" },
+  { label: "Kasir", username: "budi" },
+  { label: "Pelayan", username: "sari" },
 ]
 
 export function LoginPage() {
@@ -34,7 +35,7 @@ export function LoginPage() {
   const [formError, setFormError] = useState<string | null>(null)
 
   const form = useForm({
-    defaultValues: { email: "", password: "" },
+    defaultValues: { username: "", password: "" },
     validators: { onSubmit: loginSchema },
     onSubmit: async ({ value, formApi }) => {
       setFormError(null)
@@ -42,7 +43,7 @@ export function LoginPage() {
         const user = await signIn(value)
         await navigate({ to: homePath(user), replace: true })
       } catch (error) {
-        if (!applyServerErrors(formApi, error, ["email", "password"]))
+        if (!applyServerErrors(formApi, error, ["username", "password"]))
           setFormError(apiErrorMessage(error))
       }
     },
@@ -94,17 +95,17 @@ export function LoginPage() {
               void form.handleSubmit()
             }}
           >
-            <form.Field name="email">
+            <form.Field name="username">
               {(field) => (
                 <Field data-invalid={field.state.meta.errors.length > 0}>
                   <FieldLabel htmlFor={field.name}>
-                    {t("auth.email")}
+                    {t("auth.username")}
                   </FieldLabel>
                   <Input
                     id={field.name}
-                    type="email"
                     autoComplete="username"
-                    inputMode="email"
+                    autoCapitalize="none"
+                    spellCheck={false}
                     className="h-12 rounded-xl text-base"
                     value={field.state.value}
                     onBlur={field.handleBlur}
@@ -165,12 +166,12 @@ export function LoginPage() {
               <div className="mt-3 flex flex-wrap gap-2">
                 {demoAccounts.map((account) => (
                   <Button
-                    key={account.email}
+                    key={account.username}
                     type="button"
                     variant="outline"
                     size="touch"
                     onClick={() => {
-                      form.setFieldValue("email", account.email)
+                      form.setFieldValue("username", account.username)
                       form.setFieldValue("password", "demo1234")
                     }}
                   >

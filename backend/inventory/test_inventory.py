@@ -5,7 +5,7 @@ from django.test import TestCase
 from rest_framework.test import APIClient
 
 from accounts.models import GroupProfile, User
-from accounts.roles import CASHIER, INVENTORY, MANAGER
+from accounts.roles import CASHIER, WAITER
 from accounts.services.roles import ensure_system_roles
 from audit.models import AuditEvent
 from catalog.models import Category, Product, ProductKind, RecipeLine, TaxCategory, Unit
@@ -28,9 +28,9 @@ class InventoryTests(TestCase):
             user.groups.add(GroupProfile.objects.get(code=code).group)
             return user
 
-        self.cashier = staff("Budi", CASHIER)
-        self.manager = staff("Dimas", MANAGER)
-        self.storekeeper = staff("Wati", INVENTORY)
+        self.waiter = staff("Sari", WAITER)
+        self.manager = staff("Dimas", CASHIER)
+        self.storekeeper = staff("Wati", CASHIER)
         self.client = APIClient()
         self.client.force_authenticate(self.storekeeper)
 
@@ -160,6 +160,6 @@ class InventoryTests(TestCase):
         rows = self.client.get(f"{API}inventory/movements/?product={self.egg.pk}").data["results"]
         self.assertEqual([(row["kind"], row["quantity"]) for row in rows], [("sale", -1)])
 
-    def test_cashier_cannot_see_stock(self):
-        self.client.force_authenticate(self.cashier)
+    def test_waiter_cannot_see_stock(self):
+        self.client.force_authenticate(self.waiter)
         self.assertEqual(self.client.get(f"{API}inventory/stock/").status_code, 403)

@@ -18,7 +18,6 @@ export const settingsFormSchema = z.object({
   cash_rounding: z.union([z.literal(1), z.literal(100), z.literal(500)]),
   receipt_header: z.string().max(300),
   receipt_footer: z.string().max(300),
-  idle_lock_minutes: z.number().int().min(1).max(60),
 })
 
 export type SettingsForm = z.infer<typeof settingsFormSchema>
