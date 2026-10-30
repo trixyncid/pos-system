@@ -27,7 +27,8 @@ def _flatten(data) -> str:
 def _field_errors(data) -> dict[str, list[str]]:
     errors: dict[str, list[str]] = {}
     for field, messages in data.items():
-        if field == "non_field_errors":
+        # "detail" and "non_field_errors" describe the whole request, not a field.
+        if field in {"detail", "non_field_errors"}:
             continue
         items = messages if isinstance(messages, list) else [messages]
         errors[field] = [_flatten(item) for item in items]

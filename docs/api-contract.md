@@ -49,6 +49,27 @@ The web app sends `X-Session-Cookie: 1`, so the refresh token lives in an httpOn
 | POST / PATCH | `/staff/`, `/staff/{id}/` | `accounts.manage_staff` | `{ full_name, email?, password?, pin?, roles: [id], is_active }`. Email is optional (PIN-only staff); a password needs an email. No delete: deactivate instead, which signs the account out everywhere |
 | POST | `/staff/{id}/set-pin/` | `accounts.manage_staff` | `{ pin }` (4–6 digits) |
 
+### Catalog (`/catalog/`)
+
+Every signed-in tablet may read; writing needs `accounts.manage_settings`. Lists are not paginated (`{ success, data: [...] }`), since the whole catalog is cached on each tablet.
+
+| Method | Path | Notes |
+|---|---|---|
+| GET/POST/PATCH/DELETE | `/catalog/categories/` | `{ id, name, station: kitchen\|bar\|none, sort_order, is_active, product_count }`. A category with products cannot be deleted |
+| POST | `/catalog/categories/reorder/` | `{ ids: [uuid] }` sets `sort_order` in that order |
+| GET/POST/PATCH | `/catalog/products/?kind=menu,retail,ingredient&category=&search=&barcode=&active=true\|false\|all` | See the product shape below. `barcode` is an exact match for the snack-bar scanner |
+| DELETE | `/catalog/products/{id}/` | Archives (`is_active=false`); past orders keep pointing at it |
+| POST/DELETE | `/catalog/products/{id}/image/` | Multipart `image` (JPG/PNG/WebP, ≤ 10 MB). Stored as a 1200×900 WebP with EXIF removed |
+| GET/POST/PATCH/DELETE | `/catalog/modifier-groups/` | `{ id, name, min_select, max_select, options: [{ id?, name, price_delta }], product_count }`. `options` replaces the list; existing ids are kept |
+
+Product: `{ id, kind, name, description, category, category_name, price, cost, unit: portion|pcs|g|ml, barcode, sku, tax_category: pbjt|ppn|none, track_stock, low_stock_threshold, image_url, is_available, is_favorite, is_active, sort_order, modifier_groups: [uuid], recipe: [{ ingredient, ingredient_name, unit, quantity, cost }], recipe_cost }`.
+
+- Menu and retail products need a category.
+- Ingredients never have a category, a price, tax or modifiers.
+- Recipe lines must point at active ingredients, each used once.
+- Barcodes are unique.
+- Price and availability changes are written to the audit log with their before and after values.
+
 Escalation rules (both the API and the mock enforce them): nobody can grant a permission or give a role that does more than they can themselves, edit or reset the PIN of someone who can do more than them, deactivate themselves, change their own roles, or remove their own access to staff and roles.
 
 ## Realtime
