@@ -406,9 +406,9 @@ export function SnackbarPage() {
         }}
         side="center"
         title={t("snackbar.payTitle", { count: lines.length })}
-        className="w-[min(30rem,calc(100vw-1rem))]"
+        className="w-[min(46rem,calc(100vw-2rem))]"
       >
-        <div className="-mx-6 -mb-6 h-[min(76dvh,680px)]">
+        <div className="-mx-6 -mb-6">
           <CashPanel
             due={bill.total}
             tendered={tendered}
@@ -418,6 +418,7 @@ export function SnackbarPage() {
             canOpenShift={canOpenShift}
             paying={sell.isPending}
             onPay={() => void submit()}
+            wide
           />
         </div>
       </TouchSheet>

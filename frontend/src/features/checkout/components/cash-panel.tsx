@@ -29,6 +29,7 @@ export function CashPanel({
   canOpenShift,
   paying,
   onPay,
+  wide = false,
 }: {
   due: number
   /** Digits only, "" when nothing is typed. */
@@ -40,6 +41,11 @@ export function CashPanel({
   canOpenShift: boolean
   paying: boolean
   onPay: () => void
+  /**
+   * Keypad beside the amounts instead of below them, so the whole panel fits
+   * a modal on a landscape tablet without scrolling.
+   */
+  wide?: boolean
 }) {
   const { t } = useTranslation()
   const cash = Number(tendered || 0)
@@ -73,8 +79,48 @@ export function CashPanel({
       </div>
     )
 
-  return (
-    <div className="flex h-full min-h-0 flex-col gap-4 p-5">
+  const keypad = (
+    <NumPad
+      keyboard
+      className={wide ? undefined : "mt-auto"}
+      deleteLabel={t("auth.deleteDigit")}
+      bottomLeft={{
+        label: "000",
+        content: "000",
+        onPress: () =>
+          tendered && onTendered((tendered + "000").slice(0, MAX_DIGITS)),
+      }}
+      onDigit={(digit) =>
+        onTendered((tendered + digit).replace(/^0+/, "").slice(0, MAX_DIGITS))
+      }
+      onBackspace={() => onTendered(tendered.slice(0, -1))}
+    />
+  )
+  const payButton = (
+    <>
+      {blocked && (
+        <p className="text-center text-sm text-warning-ink">{blocked}</p>
+      )}
+      <Button
+        size="xl"
+        className="w-full"
+        disabled={!enough || paying || Boolean(blocked)}
+        onClick={onPay}
+      >
+        {paying ? (
+          <Spinner />
+        ) : (
+          <>
+            <BanknoteIcon />
+            {t("checkout.pay", { amount: formatIDR(due) })}
+          </>
+        )}
+      </Button>
+    </>
+  )
+
+  const amounts = (
+    <>
       <div className="space-y-1">
         <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
           {t("checkout.due")}
@@ -166,41 +212,25 @@ export function CashPanel({
             </Pressable>
           ))}
       </div>
+    </>
+  )
 
-      <NumPad
-        keyboard
-        className="mt-auto"
-        deleteLabel={t("auth.deleteDigit")}
-        bottomLeft={{
-          label: "000",
-          content: "000",
-          onPress: () =>
-            tendered && onTendered((tendered + "000").slice(0, MAX_DIGITS)),
-        }}
-        onDigit={(digit) =>
-          onTendered((tendered + digit).replace(/^0+/, "").slice(0, MAX_DIGITS))
-        }
-        onBackspace={() => onTendered(tendered.slice(0, -1))}
-      />
+  if (wide)
+    return (
+      <div className="grid gap-6 p-5 sm:grid-cols-2">
+        <div className="flex min-w-0 flex-col gap-4">
+          {amounts}
+          <div className="mt-auto space-y-2">{payButton}</div>
+        </div>
+        {keypad}
+      </div>
+    )
 
-      {blocked && (
-        <p className="text-center text-sm text-warning-ink">{blocked}</p>
-      )}
-      <Button
-        size="xl"
-        className="w-full"
-        disabled={!enough || paying || Boolean(blocked)}
-        onClick={onPay}
-      >
-        {paying ? (
-          <Spinner />
-        ) : (
-          <>
-            <BanknoteIcon />
-            {t("checkout.pay", { amount: formatIDR(due) })}
-          </>
-        )}
-      </Button>
+  return (
+    <div className="flex h-full min-h-0 flex-col gap-4 p-5">
+      {amounts}
+      {keypad}
+      {payButton}
     </div>
   )
 }
