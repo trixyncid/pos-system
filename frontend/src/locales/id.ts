@@ -350,6 +350,7 @@ export const id = {
     units: { portion: "porsi", pcs: "pcs", g: "gram", ml: "ml" },
   },
   floor: {
+    legend: "Status meja · ketuk untuk menyorot",
     areaSaved: "Area {{name}} disimpan",
     areaDeleted: "Area {{name}} dihapus",
     title: "Denah",

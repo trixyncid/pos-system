@@ -344,6 +344,7 @@ export const en: Messages = {
     units: { portion: "portion", pcs: "pcs", g: "gram", ml: "ml" },
   },
   floor: {
+    legend: "Table status · tap to highlight",
     areaSaved: "Area {{name}} saved",
     areaDeleted: "Area {{name}} deleted",
     title: "Floor",

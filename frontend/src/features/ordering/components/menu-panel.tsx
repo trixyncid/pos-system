@@ -1,6 +1,6 @@
 import { SearchIcon, StarIcon } from "lucide-react"
-import { AnimatePresence, motion } from "motion/react"
-import { useDeferredValue, useMemo, useState } from "react"
+import { motion } from "motion/react"
+import { useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { ProductImage } from "@/components/pos/product-image.tsx"
@@ -13,28 +13,43 @@ import {
 import type { Product } from "@/features/catalog/schemas/catalog.ts"
 import { MenuCard } from "@/features/ordering/components/menu-card.tsx"
 import { spring } from "@/lib/motion.ts"
+import { useDebouncedValue } from "@/lib/use-debounced-value.ts"
 import { cn } from "@/lib/utils.ts"
 
 const FAVORITES = "favorites"
 
+const gridClass = "grid grid-cols-[repeat(auto-fill,minmax(9.5rem,1fr))] gap-3"
+
+/**
+ * The cards fade in with a CSS animation keyed to the result set. No layout
+ * animation per card: measuring dozens of cards on every change is what made
+ * search stutter on slower tablets.
+ */
 function Grid({
   products,
   onPick,
+  resultKey,
 }: {
   products: Product[]
   onPick: (product: Product, source: Element | null) => void
+  resultKey: string
 }) {
   return (
-    <motion.div
-      layout
-      className="grid grid-cols-[repeat(auto-fill,minmax(9.5rem,1fr))] gap-3"
-    >
-      <AnimatePresence initial={false} mode="popLayout">
-        {products.map((product) => (
-          <MenuCard key={product.id} product={product} onPick={onPick} />
-        ))}
-      </AnimatePresence>
-    </motion.div>
+    <div key={resultKey} className={cn(gridClass, "rise-in")}>
+      {products.map((product) => (
+        <MenuCard key={product.id} product={product} onPick={onPick} />
+      ))}
+    </div>
+  )
+}
+
+function GridSkeleton({ count = 8 }: { count?: number }) {
+  return (
+    <div className={gridClass} aria-busy="true">
+      {Array.from({ length: count }, (_, i) => (
+        <Skeleton key={i} className="aspect-[4/4.4] rounded-3xl" />
+      ))}
+    </div>
   )
 }
 
@@ -52,7 +67,10 @@ export function MenuPanel({
   const menu = useProductsQuery("menu")
   const [selected, setSelected] = useState<string>(FAVORITES)
   const [search, setSearch] = useState("")
-  const query = useDeferredValue(search.trim().toLowerCase())
+  const typed = search.trim().toLowerCase()
+  // Filter once typing pauses; the skeleton shows while it waits.
+  const query = useDebouncedValue(typed, 300)
+  const searching = typed !== query
 
   const live = useMemo(
     () => (menu.data ?? []).filter((product) => product.is_active),
@@ -143,18 +161,18 @@ export function MenuPanel({
             className="h-12 rounded-xl bg-card pl-12 text-base"
           />
         </div>
-        {menu.isPending ? (
-          <div className="grid grid-cols-[repeat(auto-fill,minmax(9.5rem,1fr))] gap-3">
-            {Array.from({ length: 8 }, (_, i) => (
-              <Skeleton key={i} className="aspect-[4/4.4] rounded-3xl" />
-            ))}
-          </div>
+        {menu.isPending || searching ? (
+          <GridSkeleton />
         ) : visible.length === 0 ? (
           <p className="py-16 text-center text-muted-foreground">
             {t("order.empty")}
           </p>
         ) : (
-          <Grid products={visible} onPick={onPick} />
+          <Grid
+            products={visible}
+            onPick={onPick}
+            resultKey={query ? `q:${query}` : selected}
+          />
         )}
       </div>
     </div>

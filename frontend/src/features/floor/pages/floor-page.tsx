@@ -3,13 +3,17 @@ import { motion } from "motion/react"
 import { useState } from "react"
 import { useTranslation } from "react-i18next"
 
-import { StatusPill } from "@/components/pos/status-pill.tsx"
+import { Pressable } from "@/components/motion/pressable.tsx"
 import { Skeleton } from "@/components/ui/skeleton.tsx"
 import { useAreasQuery } from "@/features/floor/api/floor.ts"
 import { LiveTable } from "@/features/floor/components/live-table.tsx"
 import { TableSheet } from "@/features/floor/components/table-sheet.tsx"
 import { statusOrder, statusStyle } from "@/features/floor/lib/status.ts"
-import { CANVAS, type FloorTable } from "@/features/floor/schemas/floor.ts"
+import {
+  CANVAS,
+  type FloorTable,
+  type TableStatus,
+} from "@/features/floor/schemas/floor.ts"
 import { OpenTableSheet } from "@/features/ordering/components/open-table-sheet.tsx"
 import { apiErrorMessage } from "@/lib/api-error.ts"
 import { spring } from "@/lib/motion.ts"
@@ -29,6 +33,8 @@ export function FloorPage() {
   const [areaId, setAreaId] = useState<string | null>(null)
   const [tableId, setTableId] = useState<string | null>(null)
   const [opening, setOpening] = useState<FloorTable | null>(null)
+  // Tapping a status counter highlights those tables and fades the rest.
+  const [focus, setFocus] = useState<TableStatus | null>(null)
   const navigate = useNavigate()
 
   // Busy tables go straight to their order; free ones ask for the guest count.
@@ -110,23 +116,62 @@ export function FloorPage() {
             )
           })}
         </div>
-        <div className="flex flex-wrap gap-2" aria-label="Legend">
-          {statusOrder.map((status) => (
-            <StatusPill key={status} tone={statusStyle[status].tone}>
-              {t(`floor.status.${status}`)} · {counts[status]}
-            </StatusPill>
-          ))}
+        <div
+          role="group"
+          aria-label={t("floor.legend")}
+          className="flex flex-wrap gap-2"
+        >
+          {statusOrder.map((status) => {
+            const style = statusStyle[status]
+            const Icon = style.icon
+            const on = focus === status
+            return (
+              <Pressable
+                key={status}
+                aria-pressed={on}
+                onClick={() => setFocus(on ? null : status)}
+                className={cn(
+                  "flex h-12 items-center gap-2.5 rounded-2xl border-2 bg-card pr-3.5 pl-1.5 text-left transition-colors",
+                  on ? "border-foreground/70" : "border-transparent",
+                  focus && !on && "opacity-55"
+                )}
+              >
+                <span
+                  className={cn(
+                    "grid size-9 place-items-center rounded-xl",
+                    status === "available" && "border-2 border-dashed",
+                    status === "cleaning" && "border"
+                  )}
+                  style={{
+                    background: style.fill,
+                    borderColor: style.edge,
+                    color: style.ink,
+                  }}
+                >
+                  <Icon className="size-4.5" aria-hidden />
+                </span>
+                <span className="leading-tight">
+                  <span className="block font-heading text-lg font-semibold tabular-nums">
+                    {counts[status]}
+                  </span>
+                  <span className="block text-xs whitespace-nowrap text-muted-foreground">
+                    {t(`floor.status.${status}`)}
+                  </span>
+                </span>
+              </Pressable>
+            )
+          })}
         </div>
       </div>
 
       {/* The plan keeps the canvas ratio and shrinks to whatever space the screen leaves. */}
-      <div className="flex min-h-0 flex-1 items-center justify-center">
+      <div className="flex min-h-0 flex-1 items-start justify-center">
         <motion.div
           key={area.id}
           initial={{ opacity: 0, scale: 0.98 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={spring.sheet}
-          className="@container relative max-h-full w-full max-w-[min(100%,calc((100dvh-12rem)*10/7))] rounded-3xl border bg-card/60 shadow-(--shadow-soft)"
+          className="@container relative max-h-full w-full max-w-[min(100%,calc((100dvh-13rem)*10/7))] rounded-3xl border bg-card/50 shadow-(--shadow-soft)"
           style={{
             aspectRatio: `${CANVAS.width} / ${CANVAS.height}`,
             backgroundImage:
@@ -144,6 +189,7 @@ export function FloorPage() {
                 key={item.id}
                 table={item}
                 now={now}
+                dimmed={focus !== null && item.status !== focus}
                 onOpen={() => tap(item)}
               />
             ))

@@ -42,6 +42,7 @@ import { useCounterCart } from "@/features/snackbar/store/cart.ts"
 import { apiErrorMessage } from "@/lib/api-error.ts"
 import { billTotals, formatIDR } from "@/lib/money.ts"
 import { useScanner } from "@/lib/scanner.ts"
+import { useDebouncedValue } from "@/lib/use-debounced-value.ts"
 import { cn } from "@/lib/utils.ts"
 
 let audio: AudioContext | null = null
@@ -216,7 +217,10 @@ export function SnackbarPage() {
     .reduce((s, l) => s + l.unit_price * l.quantity, 0)
   const bill = billTotals(subtotal, 0, rules, { service: false, taxable })
 
-  const query = search.trim().toLowerCase()
+  const typed = search.trim().toLowerCase()
+  // Filter once typing pauses (a scanner's Enter is handled on submit, below).
+  const query = useDebouncedValue(typed, 300)
+  const searching = typed !== query
   const shown = (tab === "retail" ? retail.data : menu.data)
     ?.filter((p) => tab === "retail" || p.modifier_groups.length === 0)
     .filter(
@@ -261,7 +265,7 @@ export function SnackbarPage() {
             onSubmit={(event) => {
               event.preventDefault()
               // A scanner aimed at the search box, or a barcode typed by hand.
-              if (query && /^\d{6,}$/.test(query) && scan(query)) setSearch("")
+              if (typed && /^\d{6,}$/.test(typed) && scan(typed)) setSearch("")
             }}
           >
             <SearchIcon className="pointer-events-none absolute top-1/2 left-3.5 size-5 -translate-y-1/2 text-muted-foreground" />
@@ -342,14 +346,17 @@ export function SnackbarPage() {
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4">
-          {loading ? (
+          {loading || searching ? (
             <div className="grid grid-cols-[repeat(auto-fill,minmax(9.5rem,1fr))] gap-3">
               {Array.from({ length: 10 }, (_, i) => (
                 <Skeleton key={i} className="aspect-[3/4] rounded-2xl" />
               ))}
             </div>
           ) : shown?.length ? (
-            <div className="grid grid-cols-[repeat(auto-fill,minmax(9.5rem,1fr))] gap-3">
+            <div
+              key={`${tab}:${query}`}
+              className="rise-in grid grid-cols-[repeat(auto-fill,minmax(9.5rem,1fr))] gap-3"
+            >
               {shown.map((product) => (
                 <ProductTile
                   key={product.id}

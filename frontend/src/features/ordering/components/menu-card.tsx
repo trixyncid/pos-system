@@ -28,7 +28,6 @@ export function MenuCard({
   return (
     <motion.button
       type="button"
-      layout
       disabled={soldOut}
       onClick={() => onPick(product, image.current)}
       whileTap={soldOut ? undefined : { scale: 0.96 }}
