@@ -5,7 +5,6 @@ from drf_spectacular.utils import extend_schema
 from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
-from rest_framework.permissions import BasePermission
 
 from audit.services import emit
 from common.permissions import RequirePermission
@@ -38,14 +37,8 @@ TakePayment = RequirePermission("accounts.take_payment")
 Reprint = RequirePermission("accounts.reprint")
 
 
-class OrderHistoryReader(BasePermission):
-    """The order list is for whoever takes money or reads the reports."""
-
-    def has_permission(self, request, view):
-        user = request.user
-        return bool(user and user.is_authenticated) and (
-            user.has_perm("accounts.take_payment") or user.has_perm("accounts.view_reports")
-        )
+# The order list is a back-office page: owners and managers, who read the reports.
+OrderHistoryReader = RequirePermission("accounts.view_reports")
 
 
 class OrderViewSet(viewsets.GenericViewSet):
@@ -61,7 +54,7 @@ class OrderViewSet(viewsets.GenericViewSet):
         if self.action in {"bill", "payments", "promos", "promo", "refund"}:
             return [TakePayment]
         if self.action == "history":
-            return [OrderHistoryReader()]
+            return [OrderHistoryReader]
         if self.action == "reprint":
             return [Reprint]
         return [TakeOrder]

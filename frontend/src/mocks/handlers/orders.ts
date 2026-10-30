@@ -255,8 +255,7 @@ export const orderHandlers = [
       return fail(401, "Authentication credentials were not provided.", {
         code: "not_authenticated",
       })
-    const held = permissionsOf(actor)
-    if (!held.includes(perm.takePayment) && !held.includes(perm.viewReports))
+    if (!permissionsOf(actor).includes(perm.viewReports))
       return fail(403, "You do not have permission to perform this action.", {
         code: "permission_denied",
       })

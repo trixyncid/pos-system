@@ -2,6 +2,7 @@ import { ChevronRightIcon, ReceiptTextIcon, SearchIcon } from "lucide-react"
 import { useState } from "react"
 import { useTranslation } from "react-i18next"
 
+import { PageHeader } from "@/components/backoffice/page-header.tsx"
 import { Pager } from "@/components/backoffice/pager.tsx"
 import { Pressable } from "@/components/motion/pressable.tsx"
 import { MoneyText } from "@/components/pos/money-text.tsx"
@@ -89,7 +90,10 @@ function OrderRowCard({ row, onOpen }: { row: OrderRow; onOpen: () => void }) {
 
 const STATUSES = ["all", "open", "paid", "void", "refunded"] as const
 
-/** Every order of the day (or a range), restaurant and snack bar, to look up, reprint, continue or refund. */
+/**
+ * Back office: every order of the day (or a range), restaurant and snack
+ * bar, for the owner and managers to look up, reprint, continue or refund.
+ */
 export function OrdersPage() {
   const { t } = useTranslation()
   const [range, setRange] = useState<Range>(() => ({
@@ -116,15 +120,11 @@ export function OrdersPage() {
   const reset = () => setPage(1)
 
   return (
-    <div className="h-full overflow-y-auto overscroll-contain">
-      <div className="mx-auto max-w-5xl space-y-5 p-4 lg:p-6">
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <h1 className="font-heading text-2xl font-semibold">
-              {t("history.title")}
-            </h1>
-            <p className="text-muted-foreground">{t("history.subtitle")}</p>
-          </div>
+    <div className="mx-auto max-w-6xl space-y-5 p-6 lg:p-8">
+      <PageHeader
+        title={t("history.title")}
+        description={t("history.subtitle")}
+        actions={
           <DateRangePicker
             value={range}
             onChange={(next) => {
@@ -132,8 +132,9 @@ export function OrdersPage() {
               reset()
             }}
           />
-        </div>
-
+        }
+      />
+      <div className="space-y-5">
         <div className="flex flex-wrap items-center gap-3">
           <div className="relative min-w-56 flex-1">
             <SearchIcon className="pointer-events-none absolute top-1/2 left-4 size-5 -translate-y-1/2 text-muted-foreground" />

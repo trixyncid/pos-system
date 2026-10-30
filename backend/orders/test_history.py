@@ -88,7 +88,10 @@ class OrderHistoryTests(TestCase):
         return sale_id
 
     def history(self, query=""):
-        response = self.client.get(f"{API}orders/history/{query}")
+        # The list is a back-office page: the manager reads it.
+        reader = APIClient()
+        reader.force_authenticate(self.manager)
+        response = reader.get(f"{API}orders/history/{query}")
         self.assertEqual(response.status_code, 200, response.content)
         return response.data
 
@@ -107,9 +110,10 @@ class OrderHistoryTests(TestCase):
         self.assertEqual(self.history(f"?search=%23{restaurant['number']}")["count"], 1)
         self.assertEqual(self.history("?from=2020-01-01&to=2020-01-02")["count"], 0)
 
-    def test_waiter_cannot_read_the_order_list(self):
-        self.client.force_authenticate(self.waiter)
-        self.assertEqual(self.client.get(f"{API}orders/history/").status_code, 403)
+    def test_only_the_back_office_reads_the_order_list(self):
+        for user in (self.waiter, self.cashier):
+            self.client.force_authenticate(user)
+            self.assertEqual(self.client.get(f"{API}orders/history/").status_code, 403)
 
     def test_refund_needs_a_manager_and_takes_cash_and_stock_back(self):
         sale_id = self.sale(quantity=2)
