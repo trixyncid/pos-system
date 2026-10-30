@@ -80,7 +80,6 @@ export function KitPage() {
             </StatusPill>
             <StatusPill tone="warning">Bill dicetak</StatusPill>
             <StatusPill tone="info">Dipesan</StatusPill>
-            <StatusPill tone="danger">Perlu dibersihkan</StatusPill>
             <StatusPill>Nonaktif</StatusPill>
           </div>
         </Section>

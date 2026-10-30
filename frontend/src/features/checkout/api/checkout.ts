@@ -30,9 +30,11 @@ export function usePrintBill() {
   )
 }
 
+export type PayMethod = "cash" | "qris"
+
 export type PayBody = {
   id: string
-  method: "cash"
+  method: PayMethod
   tendered: number
   /** An even split: this part of what is left. */
   amount?: number

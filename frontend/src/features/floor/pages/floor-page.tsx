@@ -7,7 +7,6 @@ import { Pressable } from "@/components/motion/pressable.tsx"
 import { Skeleton } from "@/components/ui/skeleton.tsx"
 import { useAreasQuery } from "@/features/floor/api/floor.ts"
 import { LiveTable } from "@/features/floor/components/live-table.tsx"
-import { TableSheet } from "@/features/floor/components/table-sheet.tsx"
 import { statusOrder, statusStyle } from "@/features/floor/lib/status.ts"
 import {
   CANVAS,
@@ -31,7 +30,6 @@ export function FloorPage() {
   const areas = useAreasQuery({ live: true })
   const now = useNow(30_000)
   const [areaId, setAreaId] = useState<string | null>(null)
-  const [tableId, setTableId] = useState<string | null>(null)
   const [opening, setOpening] = useState<FloorTable | null>(null)
   // Tapping a status counter highlights those tables and fades the rest.
   const [focus, setFocus] = useState<TableStatus | null>(null)
@@ -44,7 +42,6 @@ export function FloorPage() {
         to: "/order/$orderId",
         params: { orderId: table.order_id },
       })
-    else if (table.status === "cleaning") setTableId(table.id)
     else setOpening(table)
   }
 
@@ -65,10 +62,6 @@ export function FloorPage() {
     )
 
   const area = areas.data.find((item) => item.id === areaId) ?? areas.data[0]!
-  const table =
-    areas.data
-      .flatMap((item) => item.tables)
-      .find((item) => item.id === tableId) ?? null
   const counts = Object.fromEntries(
     statusOrder.map((status) => [
       status,
@@ -139,8 +132,7 @@ export function FloorPage() {
                 <span
                   className={cn(
                     "grid size-9 place-items-center rounded-xl",
-                    status === "available" && "border-2 border-dashed",
-                    status === "cleaning" && "border"
+                    status === "available" && "border-2 border-dashed"
                   )}
                   style={{
                     background: style.fill,
@@ -197,15 +189,6 @@ export function FloorPage() {
         </motion.div>
       </div>
 
-      <TableSheet
-        table={table}
-        areaName={area.name}
-        onClose={() => setTableId(null)}
-        onOpenOrder={(item) => {
-          setTableId(null)
-          setOpening(item)
-        }}
-      />
       <OpenTableSheet table={opening} onClose={() => setOpening(null)} />
     </div>
   )

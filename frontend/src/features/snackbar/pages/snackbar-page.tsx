@@ -25,6 +25,7 @@ import { pageByKey } from "@/features/auth/lib/page-catalog.ts"
 import { perm } from "@/features/auth/lib/permissions.ts"
 import { useProductsQuery } from "@/features/catalog/api/catalog.ts"
 import type { Product } from "@/features/catalog/schemas/catalog.ts"
+import type { PayMethod } from "@/features/checkout/api/checkout.ts"
 import { CashPanel } from "@/features/checkout/components/cash-panel.tsx"
 import { PaidOverlay } from "@/features/checkout/components/paid-overlay.tsx"
 import { useBillRules } from "@/features/outlet/hooks/use-bill-rules.ts"
@@ -177,6 +178,7 @@ export function SnackbarPage() {
   )
   const [paying, setPaying] = useState(false)
   const [tendered, setTendered] = useState("")
+  const [method, setMethod] = useState<PayMethod>("cash")
   const [camera, setCamera] = useState(false)
   const [history, setHistory] = useState(false)
   const [result, setResult] = useState<{ change: number } | null>(null)
@@ -235,7 +237,8 @@ export function SnackbarPage() {
     try {
       const order = await sell.mutateAsync({
         id: saleId,
-        tendered: Number(tendered),
+        method,
+        tendered: method === "cash" ? Number(tendered) : 0,
         lines: lines.map((l) => ({
           id: l.id,
           product: l.product,
@@ -402,7 +405,10 @@ export function SnackbarPage() {
         open={paying}
         onOpenChange={(open) => {
           setPaying(open)
-          if (!open) setTendered("")
+          if (!open) {
+            setTendered("")
+            setMethod("cash")
+          }
         }}
         side="center"
         title={t("snackbar.payTitle", { count: lines.length })}
@@ -413,6 +419,8 @@ export function SnackbarPage() {
             due={bill.total}
             tendered={tendered}
             onTendered={setTendered}
+            method={method}
+            onMethod={setMethod}
             blocked={null}
             noShift={shift.isSuccess && shift.data === null}
             canOpenShift={canOpenShift}

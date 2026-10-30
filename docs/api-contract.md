@@ -77,12 +77,11 @@ Every signed-in tablet may read; layout changes need `accounts.edit_floor`.
 | GET | `/floor/areas/?all=true` | Areas with their tables (inactive areas only with `all=true`), not paginated |
 | POST / PATCH / DELETE | `/floor/areas/`, `/floor/areas/{id}/` | `{ name, is_active }`. Deleting an area deletes its tables |
 | PUT | `/floor/areas/{id}/layout/` | `{ tables: [{ id?, label, shape, x, y, width, height, rotation, capacity }] }` replaces the area's tables: known ids are updated, new rows created, missing ones removed. Labels are unique across all areas; two tables can swap labels in one save |
-| POST | `/floor/tables/{id}/clean/` | `accounts.take_order`. Clears "needs cleaning" |
 
 Table: `{ id, label, shape: rect|round, x, y, width, height, rotation, capacity, status, seated_at, guests, order_total, waiter }`.
 
 - `x` and `y` are the table's centre on the area's 1000×700 canvas.
-- `status` is one of `available`, `occupied`, `ordered`, `billed` or `cleaning`. Until orders exist (M5), the API reports only `available` or `cleaning`, and the occupancy fields are null.
+- `status` is one of `available`, `occupied`, `ordered` or `billed`. A table is `available` again as soon as its order is paid, moved or merged away; there is no cleaning step.
 - Every change publishes `{ type: "floor.changed" }` on the `floor` stream, so tablets can refetch.
 
 ### Orders (`/orders/`, needs `accounts.take_order`)
@@ -102,7 +101,7 @@ Names, prices and choices are copied onto each line when it is ordered.
 | POST | `/orders/{id}/send/` | `{ line_ids? }` sends held lines |
 | PATCH | `/orders/{id}/lines/{line}/` | `{ quantity?, note?, seat? }`, held lines only |
 | POST | `/orders/{id}/lines/{line}/void/` | `{ reason, approver?, approver_pin? }`. A held line is removed. A sent line needs a reason and either `accounts.void_sent_item` or an approver holding `accounts.approve_override` plus that person's PIN. Codes: `approval_required`, `approval_rejected`. A cancellation ticket prints, and the void is audited with the amount and approver |
-| POST | `/orders/{id}/move/` | `{ table }`, which must be free; the old table is flagged for cleaning |
+| POST | `/orders/{id}/move/` | `{ table }`, which must be free; the old table is free again |
 | POST | `/orders/{id}/merge/` | `{ source }`. The source's lines and guests join this order; the source becomes `merged` |
 | POST | `/orders/{id}/guests/` | `{ guests }` |
 | POST | `/orders/{id}/cancel/` | Only when nothing has been sent |
@@ -123,7 +122,7 @@ Order fields: `discount_kind: none|percent|amount`, `discount_value`, `discount_
 |---|---|---|---|
 | POST | `/orders/{id}/discount/` | `take_order` | `{ kind, value, reason, approver?, approver_pin? }`. Without `apply_discount`, a manager approves by PIN (`approval_required`, `approval_rejected`). A reason is required. Locked once any payment is taken. `kind: none` removes it. Audited. |
 | POST | `/orders/{id}/bill/` | `take_payment` | Prints the bill at the `cashier` station and marks the order `billed`. Refused while lines are held. |
-| POST | `/orders/{id}/payments/` | `take_payment` | `{ id, method: cash, tendered, amount?, line_ids? }`. Idempotent by `id`. `line_ids` pays those items plus their share of discount, service and tax; the last unpaid items settle the exact remainder. `amount` pays part of what is left (even split). Neither pays everything left. Needs an open shift (`no_open_shift`). Cash below the amount due is refused. Once fully paid the order is `paid`, the table needs cleaning, and a receipt prints at `cashier`. Audited. |
+| POST | `/orders/{id}/payments/` | `take_payment` | `{ id, method: cash|qris, tendered, amount?, line_ids? }`. Idempotent by `id`. `line_ids` pays those items plus their share of discount, service and tax; the last unpaid items settle the exact remainder. `amount` pays part of what is left (even split). Neither pays everything left. Needs an open shift (`no_open_shift`). Cash below the amount due is refused; QRIS ignores `tendered` and records the exact amount with no change. Once fully paid the order is `paid`, the table is free again, and a receipt prints at `cashier`. Audited. |
 
 ### Order list, reprint and refund
 
@@ -132,7 +131,7 @@ Order fields: `discount_kind: none|percent|amount`, `discount_value`, `discount_
 | GET | `/orders/history/?from=&to=&channel=&status=&search=` | `view_reports` (the back-office Pesanan page) | Every order (restaurant and snack bar), newest first, paginated. Days are when the order was opened (default today). `status`: `open` (open or bill printed), `paid`, `void`, `refunded`. `search`: order number (`12` or `#12`), table, item or waiter. Rows: `{ id, number, channel, type, table_label, guests, status, waiter, total, paid, items, summary, promo_name, created_at, closed_at, refunded_at }`. |
 | GET | `/orders/{id}/` | `take_order` | The full order (lines with voids, bill, payments, refund) |
 | POST | `/orders/{id}/reprint/` | `reprint` | `{ kind: bill\|receipt }`. A copy at the cashier printer, marked as a reprint. A receipt needs a payment. |
-| POST | `/orders/{id}/refund/` | `take_payment` | `{ reason, approver?, approver_pin? }`. Paid orders only.<br>• Without `void_sent_item`, a manager approves by PIN.<br>• The cash leaves the open shift's drawer (`Refund`; the shift's `totals.refunds` and expected cash include it). Refused when the drawer holds less.<br>• Tracked items go back to stock (`refund` movement); recipe ingredients stay used.<br>• A refund slip prints, and the order becomes `refunded` and leaves the reports.<br>• Audited. |
+| POST | `/orders/{id}/refund/` | `take_payment` | `{ reason, approver?, approver_pin? }`. Paid orders only.<br>• Without `void_sent_item`, a manager approves by PIN.<br>• Given back the way it was paid, one `Refund` per method: cash leaves the open shift's drawer (the shift's `totals.refunds` and expected cash include it; refused when the drawer holds less), QRIS goes back to the guest and leaves the drawer alone.<br>• Tracked items go back to stock (`refund` movement); recipe ingredients stay used.<br>• A refund slip prints, and the order becomes `refunded` and leaves the reports.<br>• Audited. |
 
 Orders also carry `refunded_at`, `refund_reason`, `refunded_by_name`, `refund_approved_by_name` and `closed_at`.
 
@@ -141,7 +140,7 @@ Orders also carry `refunded_at`, `refund_reason`, `refunded_by_name`, `refund_ap
 | Method | Path | Notes |
 |---|---|---|
 | GET | `/sales/` | Today's paid counter sales, newest first (30) |
-| POST | `/sales/` | `{ id, lines: [{ id, product, quantity }], method: cash, tendered }`. One transaction: opens a `snackbar` order, adds and sends the lines (menu items still get kitchen/bar tickets), takes the cash and prints the receipt. Idempotent by `id`. Fails as a whole on `no_open_shift`, a sold-out item or too little cash. Audited as `order.sale`. |
+| POST | `/sales/` | `{ id, lines: [{ id, product, quantity }], method: cash|qris, tendered }`. One transaction: opens a `snackbar` order, adds and sends the lines (menu items still get kitchen/bar tickets), takes the payment (QRIS is the exact total) and prints the receipt. Idempotent by `id`. Fails as a whole on `no_open_shift`, a sold-out item or too little cash. Audited as `order.sale`. |
 
 The scanner looks products up on the tablet from the cached catalog (`GET /catalog/products/?kind=retail` and `kind=menu`); `?barcode=` is the exact server-side lookup.
 

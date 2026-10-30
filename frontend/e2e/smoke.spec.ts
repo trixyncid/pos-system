@@ -108,7 +108,7 @@ test("a cashier takes a discount and is paid in cash", async ({ page }) => {
   await expect(page.getByText("Pembayaran diterima")).toBeVisible()
   await page.getByRole("button", { name: "Kembali ke denah" }).click()
   await expect(
-    page.getByRole("button", { name: "Meja 2, Perlu dibersihkan" })
+    page.getByRole("button", { name: "Meja 2, Kosong" })
   ).toBeVisible()
 })
 

@@ -353,7 +353,7 @@ class OrderViewSet(viewsets.GenericViewSet):
             target=order,
             target_label=f"#{order.number}",
             metadata={
-                "amount": given_back.amount,
+                "amount": sum(item.amount for item in order.refunds.all()),
                 "reason": given_back.reason,
                 "approved_by": given_back.approved_by.full_name,
             },

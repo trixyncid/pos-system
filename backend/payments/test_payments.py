@@ -146,8 +146,6 @@ class CheckoutTests(TestCase):
         data = response.data["data"]
         self.assertEqual(data["status"], OrderStatus.PAID)
         self.assertEqual(data["payments"][0]["change"], 49_200)
-        self.table.refresh_from_db()
-        self.assertTrue(self.table.needs_cleaning)
         receipt = PrintJob.objects.get(kind=JobKind.RECEIPT)
         self.assertEqual(receipt.payload["payment"]["tendered"], 100_000)
         # Paid: no more discounts or voids.
@@ -156,6 +154,22 @@ class CheckoutTests(TestCase):
             f"{API}orders/{self.order_id}/discount/", {"kind": "amount", "value": 1, "reason": "x"}, format="json"
         )
         self.assertEqual(response.status_code, 400)
+
+    def test_qris_takes_the_exact_amount_and_leaves_the_drawer_alone(self):
+        shift = self.open_shift()
+        response = self.pay(method="qris")
+        self.assertEqual(response.status_code, 201, response.content)
+        data = response.data["data"]
+        payment = data["payments"][0]
+        self.assertEqual(data["status"], OrderStatus.PAID)
+        self.assertEqual((payment["method"], payment["tendered"], payment["change"]), ("qris", 50_800, 0))
+        totals = self.client.get(f"{API}shifts/{shift['id']}/").data["data"]["totals"]
+        self.assertEqual((totals["cash_sales"], totals["other_sales"]), (0, 50_800))
+        self.assertEqual(totals["expected_cash"], 200_000)
+
+    def test_card_is_not_offered(self):
+        self.open_shift()
+        self.assertIn("method", self.pay(method="card", tendered=100_000).data["errors"])
 
     def test_not_enough_cash_is_refused(self):
         self.open_shift()

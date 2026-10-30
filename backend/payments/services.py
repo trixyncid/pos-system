@@ -1,6 +1,6 @@
 """
 Discounts, the printed bill, and taking money. An order is paid when its
-payments reach the bill total; then it closes and its table needs cleaning.
+payments reach the bill total; then it closes and its table is free again.
 """
 
 from __future__ import annotations
@@ -161,9 +161,6 @@ def pay(*, user, order_id, payment_id, method: str, tendered: int, amount: int |
         order.status = OrderStatus.PAID
         order.closed_at = timezone.now()
         order.save(update_fields=["status", "closed_at", "updated_at"])
-        if order.table is not None:
-            order.table.needs_cleaning = True
-            order.table.save(update_fields=["needs_cleaning", "updated_at"])
     _queue(order, user, JobKind.RECEIPT, payment=payment)
     _changed(order)
     return order, payment
@@ -205,7 +202,8 @@ VOID_SENT = "accounts.void_sent_item"
 @transaction.atomic
 def refund(*, user, order_id, reason: str, approver=None):
     """
-    Take back a paid order: the cash leaves the open shift's drawer, tracked
+    Take back a paid order the way it was paid (cash leaves the open shift's
+    drawer, QRIS goes back to the guest), tracked
     retail items go back on the shelf, and a refund slip prints. Like voiding
     a sent item, it needs accounts.void_sent_item or a manager's PIN.
     """
@@ -221,12 +219,24 @@ def refund(*, user, order_id, reason: str, approver=None):
     if authorised_by is None:
         raise ApprovalRequired("A manager must approve this refund.")
     shift = require_open_shift()
-    amount = paid_total(order)
-    if amount > shift.totals()["expected_cash"]:
+    by_method: dict[str, int] = {}
+    for payment in order.payments.all():
+        by_method[payment.method] = by_method.get(payment.method, 0) + payment.amount
+    if by_method.get(Method.CASH, 0) > shift.totals()["expected_cash"]:
         raise ValidationError({"detail": "There isn't that much cash in the drawer for this refund."})
-    given_back = Refund.objects.create(
-        order=order, shift=shift, amount=amount, reason=reason, by=user, approved_by=authorised_by
-    )
+    # One refund per way it was paid, so only the cash part leaves the drawer.
+    refunds = [
+        Refund.objects.create(
+            order=order,
+            shift=shift,
+            method=method,
+            amount=amount,
+            reason=reason,
+            by=user,
+            approved_by=authorised_by,
+        )
+        for method, amount in by_method.items()
+    ]
     order.status = OrderStatus.REFUNDED
     order.refunded_at = timezone.now()
     order.refund_reason = reason
@@ -235,9 +245,9 @@ def refund(*, user, order_id, reason: str, approver=None):
     order.save()
     lines = [line for line in order.lines.select_related("product") if line.status != LineStatus.VOID]
     inventory.return_refund(order=order, lines=lines, user=user)
-    _queue(order, user, JobKind.RECEIPT, refund=given_back)
+    _queue(order, user, JobKind.RECEIPT, refund=refunds[0])
     _changed(order)
-    return order, given_back
+    return order, refunds[0]
 
 
 def reprint(*, user, order_id, kind: str) -> PrintJob:

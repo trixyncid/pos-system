@@ -5,7 +5,6 @@ import type { FloorTable, TableLayout } from "@/features/floor/schemas/floor.ts"
 import { mockId } from "@/mocks/db/catalog.ts"
 import { areas } from "@/mocks/db/floor.ts"
 import { withOccupancy } from "@/mocks/db/orders.ts"
-import { bus } from "@/realtime/bus.ts"
 import { permissionsOf } from "@/mocks/db/staff.ts"
 import { bearerStaff } from "@/mocks/handlers/auth.ts"
 import { apiPath, fail, ok } from "@/mocks/http.ts"
@@ -150,20 +149,4 @@ export const floorHandlers = [
     })
     return ok(area)
   }),
-
-  http.post(
-    apiPath("/floor/tables/:id/clean/"),
-    async ({ request, params }) => {
-      const error = guard(request, perm.takeOrder)
-      if (error) return error
-      await delay()
-      const table = areas
-        .flatMap((a) => a.tables)
-        .find((t) => t.id === params.id)
-      if (!table) return fail(404, "Not found.")
-      table.status = "available"
-      bus.emit("floor", { type: "floor.changed" })
-      return ok(withOccupancy(table))
-    }
-  ),
 ]

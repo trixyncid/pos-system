@@ -13,6 +13,7 @@ from floor.models import Area, Table
 from inventory.models import MovementKind, StockMovement
 from orders.models import OrderStatus
 from outlet.models import Outlet
+from payments.models import Refund
 from printing.models import JobKind, PrintJob
 from shifts.models import Shift
 
@@ -74,12 +75,13 @@ class OrderHistoryTests(TestCase):
             self.client.post(f"{API}orders/{order_id}/payments/", {"id": uid(), "tendered": 50_000}, format="json")
         return order_id
 
-    def sale(self, quantity=2):
+    def sale(self, quantity=2, method="cash"):
         sale_id = uid()
         self.client.post(
             f"{API}sales/",
             {
                 "id": sale_id,
+                "method": method,
                 "tendered": 50_000,
                 "lines": [{"id": uid(), "product": str(self.chips.pk), "quantity": quantity}],
             },
@@ -113,6 +115,15 @@ class OrderHistoryTests(TestCase):
     def test_a_waiter_cannot_read_the_order_list(self):
         self.client.force_authenticate(self.waiter)
         self.assertEqual(self.client.get(f"{API}orders/history/").status_code, 403)
+
+    def test_a_qris_refund_does_not_leave_the_drawer(self):
+        sale_id = self.sale(quantity=1, method="qris")
+        response = self.client.post(f"{API}orders/{sale_id}/refund/", {"reason": "Batal"}, format="json")
+        self.assertEqual(response.status_code, 200, response.content)
+        refund = Refund.objects.get(order_id=sale_id)
+        self.assertEqual((refund.method, refund.amount), ("qris", 10_000))
+        totals = Shift.objects.get(closed_at__isnull=True).totals()
+        self.assertEqual((totals["refunds"], totals["expected_cash"]), (0, 100_000))
 
     def test_kasir_refunds_and_it_takes_cash_and_stock_back(self):
         sale_id = self.sale(quantity=2)

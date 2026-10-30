@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { z } from "zod"
 
+import type { PayMethod } from "@/features/checkout/api/checkout.ts"
 import { orderSchema } from "@/features/ordering/schemas/order.ts"
 import { shiftKeys } from "@/features/shifts/api/shifts.ts"
 import { api } from "@/lib/api.ts"
@@ -24,11 +25,12 @@ export function useTodaySalesQuery() {
 
 export type SaleBody = {
   id: string
+  method: PayMethod
   tendered: number
   lines: { id: string; product: string; quantity: number }[]
 }
 
-/** One request: the order, the cash and the receipt. Retrying with the same id never sells twice. */
+/** One request: the order, the payment and the receipt. Retrying with the same id never sells twice. */
 export function useSell() {
   const queryClient = useQueryClient()
   return useMutation({

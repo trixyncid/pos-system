@@ -102,9 +102,6 @@ def open_order(*, user: User, order_id, table: Table | None, guests: int, type: 
             )
     except IntegrityError as exc:
         raise ValidationError({"table": ["Another tablet just opened this table. Refresh the floor."]}) from exc
-    if table is not None and table.needs_cleaning:
-        table.needs_cleaning = False
-        table.save(update_fields=["needs_cleaning", "updated_at"])
     _changed(order)
     return order
 
@@ -301,20 +298,16 @@ def move_order(*, order_id, table: Table) -> Order:
     if order.table_id == table.pk:
         return order
     _assert_table_free(table, exclude=order)
-    previous = order.table
     order.table = table
     order.table_label = table.label
     order.save(update_fields=["table", "table_label", "updated_at"])
-    if previous is not None:
-        previous.needs_cleaning = True
-        previous.save(update_fields=["needs_cleaning", "updated_at"])
     _changed(order)
     return order
 
 
 @transaction.atomic
 def merge_orders(*, target_id, source_id) -> Order:
-    """Bring another table's order into this one; the other table is left to be cleaned."""
+    """Bring another table's order into this one; the other table is free again."""
     if str(target_id) == str(source_id):
         raise ValidationError({"detail": "Pick another table to merge."})
     target = _locked(target_id)
@@ -329,9 +322,6 @@ def merge_orders(*, target_id, source_id) -> Order:
     source.merged_into = target
     source.closed_at = timezone.now()
     source.save(update_fields=["status", "merged_into", "closed_at", "updated_at"])
-    if source.table is not None:
-        source.table.needs_cleaning = True
-        source.table.save(update_fields=["needs_cleaning", "updated_at"])
     _changed(source)
     _changed(target)
     return target

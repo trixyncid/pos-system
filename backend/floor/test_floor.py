@@ -74,10 +74,3 @@ class FloorTests(TestCase):
             f"{BASE}areas/{self.indoor.pk}/layout/", {"tables": [table("9", x=5000)]}, format="json"
         )
         self.assertEqual(response.status_code, 400)
-
-    def test_cleaning_a_table(self):
-        self.t1.needs_cleaning = True
-        self.t1.save()
-        self.client.force_authenticate(self.waiter)
-        response = self.client.post(f"{BASE}tables/{self.t1.pk}/clean/")
-        self.assertEqual(response.data["data"]["status"], "available")

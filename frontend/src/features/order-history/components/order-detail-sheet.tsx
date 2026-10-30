@@ -329,6 +329,9 @@ function Body({ order, onClose }: { order: Order; onClose: () => void }) {
               by: payment.received_by_name,
             })}
           >
+            {payment.method === "qris" && (
+              <span className="mr-1 text-xs">QRIS</span>
+            )}
             {formatIDR(payment.amount)}
             {payment.change > 0 && (
               <span className="ml-1 text-xs">

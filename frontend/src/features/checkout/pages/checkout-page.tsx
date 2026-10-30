@@ -9,7 +9,11 @@ import { Button } from "@/components/ui/button.tsx"
 import { Skeleton } from "@/components/ui/skeleton.tsx"
 import { useCan } from "@/features/auth/hooks/use-can.ts"
 import { perm } from "@/features/auth/lib/permissions.ts"
-import { usePay, usePrintBill } from "@/features/checkout/api/checkout.ts"
+import {
+  usePay,
+  usePrintBill,
+  type PayMethod,
+} from "@/features/checkout/api/checkout.ts"
 import {
   BillPanel,
   type SplitMode,
@@ -72,6 +76,7 @@ export function CheckoutPage() {
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [parts, setParts] = useState(2)
   const [tendered, setTendered] = useState("")
+  const [method, setMethod] = useState<PayMethod>("cash")
   const [discountOpen, setDiscountOpen] = useState(false)
   const [result, setResult] = useState<{
     change: number
@@ -130,7 +135,7 @@ export function CheckoutPage() {
       const updated = await pay.mutateAsync({
         orderId,
         id: paymentId.current,
-        method: "cash",
+        method,
         tendered: Number(tendered),
         ...(mode === "items" ? { line_ids: [...selected] } : {}),
         ...(mode === "even" && due < current.remaining ? { amount: due } : {}),
@@ -238,6 +243,8 @@ export function CheckoutPage() {
           due={due}
           tendered={tendered}
           onTendered={setTendered}
+          method={method}
+          onMethod={setMethod}
           blocked={settledView ? null : blocked}
           noShift={shift.isSuccess && shift.data === null}
           canOpenShift={canOpenShift}

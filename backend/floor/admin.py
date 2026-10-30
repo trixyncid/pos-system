@@ -6,7 +6,7 @@ from floor.models import Area, Table
 class TableInline(admin.TabularInline):
     model = Table
     extra = 0
-    fields = ("label", "shape", "capacity", "x", "y", "width", "height", "rotation", "needs_cleaning")
+    fields = ("label", "shape", "capacity", "x", "y", "width", "height", "rotation")
 
 
 @admin.register(Area)

@@ -166,8 +166,9 @@ class OrderFlowTests(TestCase):
         self.add(first["id"], [self.line(self.tea)])
         moved = self.client.post(f"{API}orders/{first['id']}/move/", {"table": str(self.t2.pk)}, format="json")
         self.assertEqual(moved.data["data"]["table_label"], "2")
-        self.t1.refresh_from_db()
-        self.assertTrue(self.t1.needs_cleaning)
+        floor = self.client.get(f"{API}floor/areas/").data["data"]
+        statuses = {t["label"]: t["status"] for area in floor for t in area["tables"]}
+        self.assertEqual(statuses["1"], "available")
 
         second = self.open(self.t1, guests=3)
         self.add(second["id"], [self.line(self.tea, quantity=2)])

@@ -324,12 +324,16 @@ export const orderHandlers = [
         code: "no_open_shift",
       })
     refreshTotals(shift)
-    if (order.paid > shift.totals.expected_cash)
+    // Like the API: QRIS goes back to the guest; only cash leaves the drawer.
+    const cashPaid = order.payments
+      .filter((p) => p.method === "cash")
+      .reduce((total, p) => total + p.amount, 0)
+    if (cashPaid > shift.totals.expected_cash)
       return fail(
         400,
         "There isn't that much cash in the drawer for this refund."
       )
-    shiftRefunds.push({ shift: shift.id, amount: order.paid })
+    if (cashPaid > 0) shiftRefunds.push({ shift: shift.id, amount: cashPaid })
     refreshTotals(shift)
     Object.assign(order, {
       status: "refunded",
@@ -579,8 +583,6 @@ export const orderHandlers = [
       return fail(400, `Table ${table.label} already has an open order.`, {
         errors: { table: [`Table ${table.label} already has an open order.`] },
       })
-    const previous = findTable(found.order.table)
-    if (previous && previous !== table) previous.status = "cleaning"
     Object.assign(found.order, { table: table.id, table_label: table.label })
     return changed(found.order)
   }),
@@ -600,8 +602,6 @@ export const orderHandlers = [
     source.order.lines = []
     target.order.guests += source.order.guests
     source.order.status = "merged"
-    const table = findTable(source.order.table)
-    if (table) table.status = "cleaning"
     changed(source.order)
     return changed(target.order)
   }),
@@ -843,35 +843,40 @@ export const orderHandlers = [
         })
       due = body.amount
     }
-    if (body.tendered < due)
+    const method = body.method ?? "cash"
+    if (method !== "cash" && method !== "qris")
+      return fail(400, "Pick cash or QRIS.", {
+        errors: { method: ["Pick cash or QRIS."] },
+      })
+    // QRIS is always the exact amount: nothing handed over, no change.
+    const tendered = method === "cash" ? (body.tendered ?? 0) : due
+    if (tendered < due)
       return fail(400, "Not enough cash.", {
         errors: { tendered: ["Not enough cash."] },
       })
 
     const payment = {
       id: body.id,
-      method: "cash",
+      method,
       amount: due,
-      tendered: body.tendered,
-      change: body.tendered - due,
+      tendered,
+      change: tendered - due,
       received_by_name: actor.full_name,
       created_at: new Date().toISOString(),
     }
     order.payments.push(payment)
     for (const line of lines) line.paid = true
-    shiftPayments.push({ shift: shift.id, method: "cash", amount: due })
+    shiftPayments.push({ shift: shift.id, method, amount: due })
     refreshTotals(shift)
     recompute(order)
     if (order.paid >= order.bill.total) {
       order.status = "paid"
       order.closed_at = new Date().toISOString()
-      const table = findTable(order.table)
-      if (table) table.status = "cleaning"
     }
     cashierJob(billPayload(order, "receipt", actor.full_name, payment))
     audit("order.payment", actor, `#${order.number}`, {
       amount: due,
-      method: "cash",
+      method,
     })
     changed(order)
     return ok(order, { status: 201 })
@@ -903,7 +908,8 @@ export const orderHandlers = [
     await delay(350)
     const body = (await request.json()) as {
       id: string
-      tendered: number
+      method?: string
+      tendered?: number
       lines: LineBody[]
     }
     const existing = orders.find((o) => o.id === body.id)
@@ -932,7 +938,13 @@ export const orderHandlers = [
     }
     recompute(order)
     const due = order.bill.total
-    if (body.tendered < due)
+    const method = body.method ?? "cash"
+    if (method !== "cash" && method !== "qris")
+      return fail(400, "Pick cash or QRIS.", {
+        errors: { method: ["Pick cash or QRIS."] },
+      })
+    const tendered = method === "cash" ? (body.tendered ?? 0) : due
+    if (tendered < due)
       return fail(400, "Not enough cash.", {
         errors: { tendered: ["Not enough cash."] },
       })
@@ -940,23 +952,23 @@ export const orderHandlers = [
     send(order, order.lines, actor)
     const payment = {
       id: mockId(),
-      method: "cash",
+      method,
       amount: due,
-      tendered: body.tendered,
-      change: body.tendered - due,
+      tendered,
+      change: tendered - due,
       received_by_name: actor.full_name,
       created_at: new Date().toISOString(),
     }
     order.payments.push(payment)
     order.status = "paid"
     order.closed_at = payment.created_at
-    shiftPayments.push({ shift: shift.id, method: "cash", amount: due })
+    shiftPayments.push({ shift: shift.id, method, amount: due })
     refreshTotals(shift)
     recompute(order)
     cashierJob(billPayload(order, "receipt", actor.full_name, payment))
     audit("order.sale", actor, `#${order.number}`, {
       amount: due,
-      method: "cash",
+      method,
     })
     changed(order)
     return ok(order, { status: 201 })

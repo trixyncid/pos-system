@@ -3,6 +3,7 @@ from rest_framework import serializers
 from catalog.models import Product
 from floor.models import Table
 from orders.models import Channel, Order, OrderLine, OrderType
+from payments.models import PAY_METHODS, Method
 
 
 class OrderLineSerializer(serializers.ModelSerializer):
@@ -179,8 +180,9 @@ class DiscountSerializer(serializers.Serializer):
 
 class PaySerializer(serializers.Serializer):
     id = serializers.UUIDField()
-    method = serializers.ChoiceField(choices=["cash"], default="cash")
-    tendered = serializers.IntegerField(min_value=0, max_value=100_000_000)
+    method = serializers.ChoiceField(choices=PAY_METHODS, default=Method.CASH)
+    # Cash handed over; ignored for QRIS, which is always the exact amount due.
+    tendered = serializers.IntegerField(min_value=0, max_value=100_000_000, default=0)
     amount = serializers.IntegerField(min_value=1, required=False)
     line_ids = serializers.ListField(child=serializers.UUIDField(), required=False, allow_empty=False)
 

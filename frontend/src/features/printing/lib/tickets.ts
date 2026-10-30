@@ -263,13 +263,17 @@ export function billTicket(
     doc.push({ type: "feed", lines: 1 })
     if (payment.amount !== bill.total)
       doc.push({ type: "row", left: "Dibayar", right: money(payment.amount) })
-    doc.push({ type: "row", left: "Tunai", right: money(payment.tendered) })
-    doc.push({
-      type: "row",
-      left: "Kembali",
-      right: money(payment.change),
-      bold: true,
-    })
+    if (payment.method === "qris")
+      doc.push({ type: "row", left: "QRIS", right: money(payment.amount) })
+    else {
+      doc.push({ type: "row", left: "Tunai", right: money(payment.tendered) })
+      doc.push({
+        type: "row",
+        left: "Kembali",
+        right: money(payment.change),
+        bold: true,
+      })
+    }
     const left = bill.total - (payload.paid ?? 0)
     if (left > 0)
       doc.push({ type: "row", left: "Sisa tagihan", right: money(left) })
@@ -324,6 +328,15 @@ export function shiftTicket(
     { type: "rule" },
     { type: "row", left: "Modal awal", right: money(shift.opening_cash) },
     { type: "row", left: "Penjualan tunai", right: money(shift.cash_sales) },
+    ...(shift.other_sales
+      ? [
+          {
+            type: "row" as const,
+            left: "Penjualan QRIS",
+            right: money(shift.other_sales),
+          },
+        ]
+      : []),
     { type: "row", left: "Kas masuk", right: money(shift.cash_in) },
     { type: "row", left: "Kas keluar", right: `-${money(shift.cash_out)}` },
     ...(shift.refunds

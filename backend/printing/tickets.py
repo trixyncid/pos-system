@@ -81,7 +81,9 @@ def bill_payload(
         },
         "paid": paid,
         # A refund slip: the same receipt, headed REFUND, with what was given back.
-        "refund": None if refund is None else {"amount": refund.amount, "reason": refund.reason},
+        "refund": None
+        if refund is None
+        else {"amount": sum(item.amount for item in order.refunds.all()), "reason": refund.reason},
         "reprint": reprint,
     }
 

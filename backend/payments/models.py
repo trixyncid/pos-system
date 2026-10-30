@@ -16,6 +16,10 @@ class Method(models.TextChoices):
     CARD = "card", _("Debit/credit card")
 
 
+# What the tablets offer today. Card stays in the model for later.
+PAY_METHODS = (Method.CASH, Method.QRIS)
+
+
 class Payment(BaseModel):
     """The id comes from the tablet, so a retried payment is recorded once."""
 
@@ -37,7 +41,10 @@ class Payment(BaseModel):
 
 
 class Refund(BaseModel):
-    """Money given back for a paid order, out of the drawer of the shift that was open then."""
+    """
+    Money given back for a paid order, the same way it was paid: cash out of
+    the drawer of the shift that is open, QRIS back to the guest's account.
+    """
 
     order = models.ForeignKey("orders.Order", on_delete=models.PROTECT, related_name="refunds")
     shift = models.ForeignKey("shifts.Shift", on_delete=models.PROTECT, related_name="refunds")

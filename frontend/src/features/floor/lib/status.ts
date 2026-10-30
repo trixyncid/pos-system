@@ -3,7 +3,6 @@ import {
   CookingPotIcon,
   type LucideIcon,
   ReceiptTextIcon,
-  SparklesIcon,
   UsersIcon,
 } from "lucide-react"
 
@@ -15,13 +14,12 @@ export const statusOrder: readonly TableStatus[] = [
   "occupied",
   "ordered",
   "billed",
-  "cleaning",
 ]
 
 /**
  * How each status looks on the plan. Busy tables (seated, ordered, bill
  * printed) are solid blocks in three hues that stay apart for colour-blind
- * staff; free tables are quiet outlines; cleaning is hatched. Every status
+ * staff; free tables are quiet outlines. Every status
  * also has its own icon, so colour is never the only cue.
  */
 export const statusStyle: Record<
@@ -73,15 +71,6 @@ export const statusStyle: Record<
     swatch: "var(--table-billed)",
     icon: ReceiptTextIcon,
     solid: true,
-  },
-  cleaning: {
-    tone: "neutral",
-    fill: "repeating-linear-gradient(135deg, var(--muted) 0 6px, var(--card) 6px 12px)",
-    edge: "var(--border)",
-    ink: "var(--muted-foreground)",
-    swatch: "var(--muted-foreground)",
-    icon: SparklesIcon,
-    solid: false,
   },
 }
 

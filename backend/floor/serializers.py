@@ -48,7 +48,7 @@ class TableSerializer(serializers.ModelSerializer):
         occupancy = self._occupancy(table)
         if occupancy is not None:
             return occupancy["status"]
-        return "cleaning" if table.needs_cleaning else "available"
+        return "available"
 
     def get_seated_at(self, table) -> str | None:
         occupancy = self._occupancy(table)

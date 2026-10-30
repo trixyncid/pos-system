@@ -12,13 +12,15 @@ from orders.models import Channel, Order, OrderLine, OrderStatus
 from orders.serializers import LineInputSerializer, OrderSerializer
 from orders.services import LineInput
 from payments import services
+from payments.models import PAY_METHODS, Method
 
 
 class SaleSerializer(serializers.Serializer):
     id = serializers.UUIDField()
     lines = LineInputSerializer(many=True, allow_empty=False, max_length=200)
-    method = serializers.ChoiceField(choices=["cash"], default="cash")
-    tendered = serializers.IntegerField(min_value=0, max_value=100_000_000)
+    method = serializers.ChoiceField(choices=PAY_METHODS, default=Method.CASH)
+    # Cash handed over; ignored for QRIS, which is always the exact total.
+    tendered = serializers.IntegerField(min_value=0, max_value=100_000_000, default=0)
 
 
 class SaleViewSet(viewsets.GenericViewSet):
@@ -71,6 +73,9 @@ class SaleViewSet(viewsets.GenericViewSet):
             "order.sale",
             target=order,
             target_label=f"#{order.number}",
-            metadata={"amount": sum(payment.amount for payment in order.payments.all()), "method": "cash"},
+            metadata={
+                "amount": sum(payment.amount for payment in order.payments.all()),
+                "method": data.validated_data["method"],
+            },
         )
         return ok(self.get_serializer(order).data, status=201)

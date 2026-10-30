@@ -1,19 +1,17 @@
 """
 Areas and tables. Every signed-in tablet reads the floor; changing the layout
-needs accounts.edit_floor; marking a table clean needs accounts.take_order.
+needs accounts.edit_floor.
 """
 
 from drf_spectacular.utils import extend_schema
 from rest_framework import viewsets
 from rest_framework.decorators import action
-from rest_framework.generics import get_object_or_404
 from rest_framework.permissions import SAFE_METHODS, BasePermission
 
 from audit.services import emit
-from common.permissions import RequirePermission
 from common.responses import ok
 from floor.models import Area, Table
-from floor.serializers import AreaSerializer, LayoutSerializer, TableSerializer, floor_occupancy
+from floor.serializers import AreaSerializer, LayoutSerializer, floor_occupancy
 from realtime.broadcast import publish
 
 
@@ -87,21 +85,3 @@ class AreaViewSet(viewsets.ModelViewSet):
         floor_changed()
         area = self.get_queryset().get(pk=area.pk)
         return ok(self.get_serializer(area).data)
-
-
-class TableViewSet(viewsets.GenericViewSet):
-    queryset = Table.objects.select_related("area")
-    serializer_class = TableSerializer
-
-    @extend_schema(request=None, responses=TableSerializer)
-    @action(
-        detail=True,
-        methods=["post"],
-        permission_classes=[RequirePermission("accounts.take_order")],
-    )
-    def clean(self, request, pk=None):
-        table = get_object_or_404(self.get_queryset(), pk=pk)
-        table.needs_cleaning = False
-        table.save(update_fields=["needs_cleaning", "updated_at"])
-        floor_changed()
-        return ok(self.get_serializer(table).data)

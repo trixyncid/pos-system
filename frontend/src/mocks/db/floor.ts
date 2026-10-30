@@ -12,9 +12,7 @@ type Seed = [
   rotation?: number,
 ]
 
-/** Only the cleaning flag is stored on a table; occupancy comes from the mock orders (db/orders.ts). */
-const needsCleaning = new Set(["10"])
-
+/** A table is stored free; occupancy comes from the mock orders (db/orders.ts). */
 function table([
   label,
   shape,
@@ -35,7 +33,7 @@ function table([
     height,
     rotation,
     capacity,
-    status: needsCleaning.has(label) ? "cleaning" : "available",
+    status: "available",
     seated_at: null,
     guests: null,
     order_total: null,

@@ -196,6 +196,9 @@ function CurrentShift({ shift }: { shift: Shift }) {
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Stat label={t("shifts.openingCash")} amount={shift.opening_cash} />
         <Stat label={t("shifts.cashSales")} amount={totals.cash_sales} />
+        {totals.other_sales > 0 && (
+          <Stat label={t("shifts.qrisSales")} amount={totals.other_sales} />
+        )}
         <Stat label={t("shifts.cashIn")} amount={totals.cash_in} sign="+" />
         <Stat label={t("shifts.cashOut")} amount={totals.cash_out} sign="−" />
         {totals.refunds > 0 && (

@@ -43,8 +43,6 @@ class Table(BaseModel):
     height = models.FloatField(_("height"), validators=[MinValueValidator(30), MaxValueValidator(400)])
     rotation = models.FloatField(_("rotation"), default=0, validators=[MinValueValidator(0), MaxValueValidator(360)])
     capacity = models.PositiveSmallIntegerField(_("seats"), default=4, validators=[MinValueValidator(1)])
-    # Set when guests leave; cleared by staff. Occupancy itself comes from open orders (M5).
-    needs_cleaning = models.BooleanField(_("needs cleaning"), default=False)
 
     class Meta:
         verbose_name = _("table")

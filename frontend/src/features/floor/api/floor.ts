@@ -1,11 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { z } from "zod"
 
-import {
-  areaSchema,
-  tableSchema,
-  type TableLayout,
-} from "@/features/floor/schemas/floor.ts"
+import { areaSchema, type TableLayout } from "@/features/floor/schemas/floor.ts"
 import { api } from "@/lib/api.ts"
 
 export const floorKeys = {
@@ -76,17 +72,4 @@ export function useSaveLayout() {
       return areaSchema.parse(data.data)
     }
   )
-}
-
-export function useCleanTable() {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: async (id: string) => {
-      const { data } = await api.post<{ data: unknown }>(
-        `/floor/tables/${id}/clean/`
-      )
-      return tableSchema.parse(data.data)
-    },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: floorKeys.all }),
-  })
 }

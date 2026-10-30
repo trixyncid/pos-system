@@ -8,7 +8,6 @@ export const tableStatusSchema = z.enum([
   "occupied",
   "ordered",
   "billed",
-  "cleaning",
 ])
 export type TableStatus = z.infer<typeof tableStatusSchema>
 
