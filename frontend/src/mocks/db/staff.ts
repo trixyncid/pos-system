@@ -73,6 +73,9 @@ export type MockStaff = {
 }
 
 const joined = "2026-08-01T09:00:00+07:00"
+/** Earlier today, so the staff list reads like a working day. */
+const signedInToday = (minutesAgo: number) =>
+  new Date(Date.now() - minutesAgo * 60_000).toISOString()
 
 /** Demo accounts: everyone signs in with their own username and demo1234. */
 export const staff: MockStaff[] = [
@@ -84,7 +87,7 @@ export const staff: MockStaff[] = [
     password: "demo1234",
     is_active: true,
     roleIds: [1],
-    last_login: "2026-10-30T08:10:00+07:00",
+    last_login: signedInToday(90),
     date_joined: joined,
   },
   {
@@ -95,7 +98,7 @@ export const staff: MockStaff[] = [
     password: "demo1234",
     is_active: true,
     roleIds: [2],
-    last_login: "2026-10-30T07:55:00+07:00",
+    last_login: signedInToday(105),
     date_joined: joined,
   },
   {

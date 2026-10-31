@@ -74,6 +74,8 @@ export function generateHistory(now = new Date()) {
   const drinks = menu.filter((p) => !food.includes(p))
   const retail = products.filter((p) => p.kind === "retail" && p.is_active)
 
+  // Today is always a full trading day, even early in the morning, so the
+  // demo dashboard and reports never look empty (some times may be later than now).
   for (let daysAgo = 30; daysAgo >= 0; daysAgo--) {
     const day = new Date(now)
     day.setDate(day.getDate() - daysAgo)
@@ -88,7 +90,6 @@ export function generateHistory(now = new Date()) {
       for (let n = 0; n < count; n++) {
         const closed = new Date(day)
         closed.setHours(hour, between(0, 59), between(0, 59), 0)
-        if (closed > now) return
         const guests = between(1, 6)
         const lines: OrderLine[] = []
         for (let g = 0; g < guests; g++) {
@@ -151,7 +152,6 @@ export function generateHistory(now = new Date()) {
       for (let n = 0; n < count; n++) {
         const closed = new Date(day)
         closed.setHours(hour, between(0, 59), between(0, 59), 0)
-        if (closed > now) break
         const lines = Array.from({ length: between(1, 3) }, () =>
           lineOf(pick(retail), between(1, 2))
         )

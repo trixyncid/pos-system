@@ -35,8 +35,21 @@ export function refreshTotals(shift: Shift) {
 
 export const currentShift = () => shifts.find((shift) => !shift.closed_at)
 
-const hoursAgo = (hours: number) =>
-  new Date(Date.now() - hours * 3_600_000).toISOString()
+/** A time of day, `daysAgo` days back, so every shift sits on its own calendar day. */
+function dayAt(daysAgo: number, hour: number, minute = 0) {
+  const at = new Date()
+  at.setDate(at.getDate() - daysAgo)
+  at.setHours(hour, minute, 0, 0)
+  return at
+}
+
+// Today's shift opens at 08:00, or half an hour ago when it's earlier than that.
+const openedToday = new Date(
+  Math.max(
+    dayAt(0, 0, 5).getTime(),
+    Math.min(dayAt(0, 8).getTime(), Date.now() - 30 * 60_000)
+  )
+)
 
 function seedClosed(
   daysAgo: number,
@@ -45,13 +58,12 @@ function seedClosed(
   sales: number,
   counted: number
 ) {
-  const opened = hoursAgo(daysAgo * 24 + 10)
   const shift: Shift = {
     id: mockId(),
-    created_at: opened,
+    created_at: dayAt(daysAgo, 8).toISOString(),
     opened_by_name: by,
     opening_cash: opening,
-    closed_at: hoursAgo(daysAgo * 24 + 1),
+    closed_at: dayAt(daysAgo, 22, 30).toISOString(),
     closed_by_name: by,
     counted_cash: counted,
     expected_cash: opening + sales,
@@ -77,7 +89,7 @@ seedClosed(1, "Budi Santoso", 500_000, 5_120_700, 5_618_700)
 // Today's shift is open, so checkout works straight away in the demo.
 const today: Shift = {
   id: mockId(),
-  created_at: hoursAgo(5),
+  created_at: openedToday.toISOString(),
   opened_by_name: "Budi Santoso",
   opening_cash: 500_000,
   closed_at: null,
@@ -102,7 +114,9 @@ const today: Shift = {
       amount: 45_000,
       reason: "Beli es batu",
       by_name: "Dimas Pratama",
-      created_at: hoursAgo(3),
+      created_at: new Date(
+        (openedToday.getTime() + Date.now()) / 2
+      ).toISOString(),
     },
   ],
 }

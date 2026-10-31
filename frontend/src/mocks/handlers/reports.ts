@@ -185,17 +185,15 @@ export const reportHandlers = [
           )
       }
     }
-    // backend reports.services.dashboard: a day in progress is compared hour for hour.
-    const dayStart = new Date(day.getFullYear(), day.getMonth(), day.getDate())
-    const elapsed = Date.now() - dayStart.getTime()
-    const cutoff = elapsed > 0 && elapsed < 86_400_000 ? elapsed : undefined
+    // The API compares a day in progress hour for hour. The mock's today is
+    // always a full trading day (db/history.ts), so it compares whole days.
     const compare = (other: Date) => {
-      const past = figures(paidOn(other, other, cutoff))
+      const past = figures(paidOn(other, other))
       return {
         date: iso(other),
         sales: past.sales,
         orders: past.orders,
-        partial: cutoff !== undefined,
+        partial: false,
       }
     }
     const tables = areas.flatMap((a) => a.tables).length
