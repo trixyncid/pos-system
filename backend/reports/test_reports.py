@@ -47,8 +47,8 @@ class ReportTests(TestCase):
         ]
         self.today = timezone.localdate()
 
-    def paid(self, lines, *, day=None, hour=12, channel=Channel.RESTAURANT, guests=2, table=True, **extra):
-        closed = timezone.make_aware(datetime.combine(day or self.today, time(hour, 15)))
+    def paid(self, lines, *, day=None, hour=12, minute=15, channel=Channel.RESTAURANT, guests=2, table=True, **extra):
+        closed = timezone.make_aware(datetime.combine(day or self.today, time(hour, minute)))
         order = Order.objects.create(
             number=next(numbers),
             channel=channel,
@@ -89,7 +89,8 @@ class ReportTests(TestCase):
             discount_value=10,
             discount_approved_by=self.manager,
         )
-        self.paid([(self.fried_rice, 1, sent)], day=self.today - timedelta(days=1), hour=0)  # 33.000 yesterday
+        # 33.000 yesterday, at midnight so "the same hours yesterday" holds it whatever the time now.
+        self.paid([(self.fried_rice, 1, sent)], day=self.today - timedelta(days=1), hour=0, minute=0)
         Order.objects.create(number=99, opened_by=self.manager, status=OrderStatus.OPEN)  # Not paid: not counted.
 
         data = self.client.get(f"{API}reports/dashboard/").data["data"]
@@ -160,7 +161,7 @@ class ReportTests(TestCase):
 
     def test_today_is_compared_with_the_same_hours_yesterday(self):
         yesterday = self.today - timedelta(days=1)
-        self.paid([(self.fried_rice, 1, LineStatus.SENT)], day=yesterday, hour=0)
+        self.paid([(self.fried_rice, 1, LineStatus.SENT)], day=yesterday, hour=0, minute=0)
         self.paid([(self.fried_rice, 1, LineStatus.SENT)], day=yesterday, hour=23)
         now = timezone.localtime()
         data = self.client.get(f"{API}reports/dashboard/").data["data"]

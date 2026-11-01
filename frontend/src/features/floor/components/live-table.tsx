@@ -10,10 +10,11 @@ import {
 import { CANVAS, type FloorTable } from "@/features/floor/schemas/floor.ts"
 import { spring } from "@/lib/motion.ts"
 import { cn } from "@/lib/utils.ts"
+import { numberFormat } from "@/lib/locale-format.ts"
 
 const pct = (value: number, of: number) => `${(value / of) * 100}%`
 
-const compact = new Intl.NumberFormat("id-ID", {
+const compact = numberFormat({
   notation: "compact",
   maximumFractionDigits: 1,
 })

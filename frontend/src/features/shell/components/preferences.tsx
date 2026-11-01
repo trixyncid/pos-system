@@ -42,6 +42,21 @@ function FlagGB({ className }: { className?: string }) {
   )
 }
 
+/** Traditional Chinese gets its script, not a flag: which flag would be a political choice. */
+function BadgeZhHant({ className }: { className?: string }) {
+  return (
+    <span
+      aria-hidden
+      className={cn(
+        className,
+        "grid place-items-center bg-[#c8102e] text-[10px] leading-none font-semibold text-white"
+      )}
+    >
+      繁
+    </span>
+  )
+}
+
 const LANGUAGES: {
   code: Language
   label: string
@@ -50,12 +65,13 @@ const LANGUAGES: {
 }[] = [
   { code: "id", label: "Bahasa Indonesia", short: "ID", Flag: FlagID },
   { code: "en", label: "English", short: "EN", Flag: FlagGB },
+  { code: "zh-Hant", label: "繁體中文", short: "繁中", Flag: BadgeZhHant },
 ]
 
 const flagClass =
   "h-4 w-6 shrink-0 overflow-hidden rounded-[3px] ring-1 ring-black/10"
 
-/** The language picker: a flag and code in the bar, both languages in full in the menu. */
+/** The language picker: a flag and code in the bar, every language in full in the menu. */
 export function LanguageMenu({ className }: { className?: string }) {
   const { t, i18n } = useTranslation()
   const current =

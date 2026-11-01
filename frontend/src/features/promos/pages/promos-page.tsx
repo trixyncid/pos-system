@@ -35,6 +35,7 @@ import { apiErrorMessage } from "@/lib/api-error.ts"
 import { today } from "@/lib/dates.ts"
 import { spring } from "@/lib/motion.ts"
 import { cn } from "@/lib/utils.ts"
+import { dateFormat } from "@/lib/locale-format.ts"
 
 const stateTone = {
   on: "success",
@@ -43,7 +44,7 @@ const stateTone = {
   off: "neutral",
 } as const satisfies Record<PromoState, string>
 
-const shortDate = new Intl.DateTimeFormat("id-ID", {
+const shortDate = dateFormat({
   day: "numeric",
   month: "short",
 })

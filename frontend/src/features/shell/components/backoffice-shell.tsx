@@ -3,12 +3,12 @@ import {
   ArrowLeftIcon,
   PanelLeftCloseIcon,
   PanelLeftOpenIcon,
-  StoreIcon,
 } from "lucide-react"
 import { motion } from "motion/react"
 import { useState } from "react"
 import { useTranslation } from "react-i18next"
 
+import { BRAND, BrandMark } from "@/components/pos/brand.tsx"
 import { Button } from "@/components/ui/button.tsx"
 import { sectionOrder } from "@/features/auth/lib/page-catalog.ts"
 import { visiblePages } from "@/features/auth/lib/route-access.ts"
@@ -70,11 +70,9 @@ export function BackofficeShell() {
         )}
       >
         <div className="flex h-16 items-center gap-2.5 px-5">
-          <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary text-primary-foreground">
-            <StoreIcon className="size-5" />
-          </span>
+          <BrandMark />
           <span className={cn("truncate font-heading font-semibold", wide)}>
-            {outlet.data?.name}
+            {outlet.data?.name ?? BRAND.name}
           </span>
         </div>
         <nav className="flex-1 overflow-y-auto px-3 py-2">

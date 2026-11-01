@@ -250,6 +250,21 @@ Job: `{ id, station, kind: kitchen|void|bill|receipt|shift|test, status, payload
 
 Escalation rules (both the API and the mock enforce them): nobody can grant a permission or give a role that does more than they can themselves, edit or reset the PIN of someone who can do more than them, deactivate themselves, change their own roles, or remove their own access to staff and roles.
 
+### Customer displays (`/displays/`)
+
+A customer display has no staff login. It registers itself, shows a six-digit code, and a cashier pairs it by entering that code. After that it holds a secret token (only its hash is stored) that lets it read its own setup and listen on its own socket. Setup guide: [cashier-pc-setup.md](cashier-pc-setup.md).
+
+| Method | Path | Auth | Notes |
+|---|---|---|---|
+| POST | `/displays/register/` | none (throttled `display_register`, 10/hour) | `{ id, paired: false, code, outlet: { name, address }, token }`. The token is returned only here |
+| GET | `/displays/self/` | `X-Display-Token` | `{ id, paired, code, outlet }`. 401 `display_unknown` when the token is not known (removed): register again |
+| POST | `/displays/pair/` | `take_payment` | `{ code }`. 400 when no unpaired display shows it. The display hears `{ type: "paired" }` |
+| POST | `/displays/{id}/state/` | `take_payment` | `{ state }`: what to show, a whole snapshot (`view`: `idle`, `cart`, `paid`; see `frontend/src/features/display/lib/state.ts`). Cached 12 h so a reconnecting display catches up; at most 32 KB. 404 `display_unpaired` once removed |
+| GET | `/displays/` | `manage_settings` | Paired displays: `[{ id, name, paired_at, paired_by_name, last_seen, created_at }]` |
+| DELETE | `/displays/{id}/` | `manage_settings` | Removes it; the display hears `{ type: "revoked" }`, forgets its token and shows a new code |
+
+The display's socket is `/ws/display/` with subprotocols `["pos-display", token]`. On connect a paired display receives the current `{ type: "state", state }`, then every new one. Unpaired displays registered more than a day ago are deleted on the next registration.
+
 ## Realtime
 
 `wss://<api>/ws/outlet/`, opened with `new WebSocket(url, ["pos-auth", accessToken])`. Tokens are never sent in the query string.

@@ -223,6 +223,16 @@ const posPages = pages
   .map(pageRoute)
 const adminPages = pages.filter((page) => page.shell === "admin").map(pageRoute)
 
+/** The customer display: no staff login, it pairs with a code (features/display). */
+const displayRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/display",
+  component: lazyRouteComponent(
+    () => import("@/features/display/pages/display-page.tsx"),
+    "DisplayPage"
+  ),
+})
+
 // Development only: the design kit at /kit, outside the sign-in guard.
 const kitRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -238,6 +248,7 @@ const kitRoute = createRoute({
 
 const routeTree = rootRoute.addChildren([
   loginRoute,
+  displayRoute,
   kitRoute,
   appRoute.addChildren([
     indexRoute,

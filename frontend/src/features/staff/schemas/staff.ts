@@ -33,23 +33,20 @@ export const usernamePattern = /^[a-z0-9][a-z0-9._-]{2,29}$/
 export function staffFormSchema(isNew: boolean) {
   return z
     .object({
-      full_name: z.string().trim().min(1, "Nama wajib diisi."),
+      full_name: z.string().trim().min(1, "validation.name"),
       username: z
         .string()
         .trim()
         .toLowerCase()
-        .regex(usernamePattern, "3–30 huruf kecil, angka, titik, - atau _."),
-      email: z.union([z.literal(""), z.email("Masukkan email yang benar.")]),
-      password: z.union([
-        z.literal(""),
-        z.string().min(8, "Minimal 8 karakter."),
-      ]),
+        .regex(usernamePattern, "validation.username"),
+      email: z.union([z.literal(""), z.email("validation.email")]),
+      password: z.union([z.literal(""), z.string().min(8, "validation.min8")]),
       roles: z.array(z.number()),
       is_active: z.boolean(),
     })
     .refine((value) => !isNew || value.password, {
       path: ["password"],
-      message: "Buat kata sandi untuk masuk.",
+      message: "validation.newPassword",
     })
 }
 

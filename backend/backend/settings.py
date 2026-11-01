@@ -56,6 +56,7 @@ INSTALLED_APPS = [
     "printing.apps.PrintingConfig",
     "reports.apps.ReportsConfig",
     "promos.apps.PromosConfig",
+    "display.apps.DisplayConfig",
 ]
 
 AUTH_USER_MODEL = "accounts.User"
@@ -206,6 +207,8 @@ REST_FRAMEWORK = {
         "auth": "10/min",
         "pin": "10/min",
         "token_refresh": "60/min",
+        # A customer display registers once; this only stops a script filling the table.
+        "display_register": "10/hour",
     },
     "EXCEPTION_HANDLER": "common.exceptions.api_exception_handler",
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",

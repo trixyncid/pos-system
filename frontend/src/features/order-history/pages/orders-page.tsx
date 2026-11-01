@@ -29,8 +29,9 @@ import { apiErrorMessage } from "@/lib/api-error.ts"
 import { today } from "@/lib/dates.ts"
 import { useDebouncedValue } from "@/lib/use-debounced-value.ts"
 import { cn } from "@/lib/utils.ts"
+import { dateFormat } from "@/lib/locale-format.ts"
 
-const time = new Intl.DateTimeFormat("id-ID", {
+const time = dateFormat({
   day: "numeric",
   month: "short",
   hour: "2-digit",

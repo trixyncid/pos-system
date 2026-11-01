@@ -1,0 +1,18 @@
+{
+  "id": "/",
+  "name": "Yi Ci Pang POS",
+  "short_name": "Yi Ci Pang",
+  "description": "Kasir, denah meja, snack bar, stok dan laporan Yi Ci Pang.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#fdfaf6",
+  "theme_color": "#df2225",
+  "lang": "id",
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

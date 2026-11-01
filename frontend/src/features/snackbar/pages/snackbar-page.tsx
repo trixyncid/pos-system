@@ -27,6 +27,7 @@ import { useProductsQuery } from "@/features/catalog/api/catalog.ts"
 import type { Product } from "@/features/catalog/schemas/catalog.ts"
 import type { PayMethod } from "@/features/checkout/api/checkout.ts"
 import { CashPanel } from "@/features/checkout/components/cash-panel.tsx"
+import { useCustomerDisplay } from "@/features/display/hooks/use-customer-display.ts"
 import { PaidOverlay } from "@/features/checkout/components/paid-overlay.tsx"
 import { useBillRules } from "@/features/outlet/hooks/use-bill-rules.ts"
 import { useCurrentShiftQuery } from "@/features/shifts/api/shifts.ts"
@@ -45,6 +46,7 @@ import { billTotals, formatIDR } from "@/lib/money.ts"
 import { useScanner } from "@/lib/scanner.ts"
 import { useDebouncedValue } from "@/lib/use-debounced-value.ts"
 import { cn } from "@/lib/utils.ts"
+import { dateFormat } from "@/lib/locale-format.ts"
 
 let audio: AudioContext | null = null
 
@@ -66,7 +68,7 @@ function beep(ok: boolean) {
   navigator.vibrate?.(ok ? 20 : [40, 40, 40])
 }
 
-const time = new Intl.DateTimeFormat("id-ID", {
+const time = dateFormat({
   hour: "2-digit",
   minute: "2-digit",
 })
@@ -181,7 +183,10 @@ export function SnackbarPage() {
   const [method, setMethod] = useState<PayMethod>("cash")
   const [camera, setCamera] = useState(false)
   const [history, setHistory] = useState(false)
-  const [result, setResult] = useState<{ change: number } | null>(null)
+  const [result, setResult] = useState<{
+    change: number
+    total: number
+  } | null>(null)
 
   // Anything sold at the counter: retail goods, and menu items with no choices to make.
   const sellable = useMemo(
@@ -219,6 +224,27 @@ export function SnackbarPage() {
     .reduce((s, l) => s + l.unit_price * l.quantity, 0)
   const bill = billTotals(subtotal, 0, rules, { service: false, taxable })
 
+  // The customer sees each scan land on the second screen, then the change.
+  useCustomerDisplay(
+    result
+      ? { view: "paid", total: result.total, change: result.change }
+      : lines.length
+        ? {
+            view: "cart",
+            channel: "snackbar",
+            label: t("nav.snackbar"),
+            lines: lines.map((line) => ({
+              id: line.id,
+              name: line.name,
+              quantity: line.quantity,
+              total: line.unit_price * line.quantity,
+            })),
+            bill,
+            touched: touched?.id,
+          }
+        : null
+  )
+
   const typed = search.trim().toLowerCase()
   // Filter once typing pauses (a scanner's Enter is handled on submit, below).
   const query = useDebouncedValue(typed, 300)
@@ -246,7 +272,8 @@ export function SnackbarPage() {
         })),
       })
       setPaying(false)
-      setResult({ change: order.payments.at(-1)?.change ?? 0 })
+      const payment = order.payments.at(-1)
+      setResult({ change: payment?.change ?? 0, total: payment?.amount ?? 0 })
       setTendered("")
       clear()
     } catch (error) {

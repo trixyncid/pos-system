@@ -25,8 +25,8 @@ export const sessionSchema = z.object({
 })
 
 export const loginSchema = z.object({
-  username: z.string().trim().min(1, "Masukkan username."),
-  password: z.string().min(1, "Masukkan kata sandi."),
+  username: z.string().trim().min(1, "validation.enterUsername"),
+  password: z.string().min(1, "validation.enterPassword"),
 })
 
 export type LoginInput = z.infer<typeof loginSchema>

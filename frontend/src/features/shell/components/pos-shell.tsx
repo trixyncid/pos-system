@@ -1,8 +1,9 @@
 import { Link, Outlet, useRouterState } from "@tanstack/react-router"
-import { BriefcaseBusinessIcon, StoreIcon } from "lucide-react"
+import { BriefcaseBusinessIcon } from "lucide-react"
 import { motion } from "motion/react"
 import { useTranslation } from "react-i18next"
 
+import { BRAND, BrandMark } from "@/components/pos/brand.tsx"
 import { Button } from "@/components/ui/button.tsx"
 import { visiblePages } from "@/features/auth/lib/route-access.ts"
 import { useSession } from "@/features/auth/store/session-store.ts"
@@ -15,8 +16,9 @@ import { UserMenu } from "@/features/shell/components/user-menu.tsx"
 import { spring } from "@/lib/motion.ts"
 import { useNow } from "@/lib/use-now.ts"
 import { cn } from "@/lib/utils.ts"
+import { dateFormat } from "@/lib/locale-format.ts"
 
-const clock = new Intl.DateTimeFormat("id-ID", {
+const clock = dateFormat({
   hour: "2-digit",
   minute: "2-digit",
 })
@@ -40,11 +42,9 @@ export function PosShell() {
     <div className="flex h-dvh flex-col bg-canvas pt-safe">
       <header className="flex h-16 shrink-0 items-center gap-3 border-b bg-background/85 px-3 backdrop-blur-md sm:px-4">
         <div className="flex min-w-0 items-center gap-2.5">
-          <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary text-primary-foreground">
-            <StoreIcon className="size-5" />
-          </span>
+          <BrandMark />
           <span className="hidden truncate font-heading font-semibold xl:block">
-            {outlet.data?.name}
+            {outlet.data?.name ?? BRAND.name}
           </span>
         </div>
 

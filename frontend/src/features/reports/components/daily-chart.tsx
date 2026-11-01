@@ -13,12 +13,13 @@ import { compactIDR } from "@/features/reports/lib/format.ts"
 import type { SalesDay } from "@/features/reports/schemas/reports.ts"
 import { parseIsoDate } from "@/lib/dates.ts"
 import { formatIDR } from "@/lib/money.ts"
+import { dateFormat } from "@/lib/locale-format.ts"
 
-const short = new Intl.DateTimeFormat("id-ID", {
+const short = dateFormat({
   day: "numeric",
   month: "short",
 })
-const long = new Intl.DateTimeFormat("id-ID", {
+const long = dateFormat({
   weekday: "short",
   day: "numeric",
   month: "short",

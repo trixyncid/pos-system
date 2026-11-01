@@ -1,11 +1,12 @@
 import { useForm } from "@tanstack/react-form"
 import { useNavigate } from "@tanstack/react-router"
-import { ArrowRightIcon, StoreIcon } from "lucide-react"
+import { ArrowRightIcon } from "lucide-react"
 import { useState } from "react"
 import { useTranslation } from "react-i18next"
 import { toast } from "sonner"
 
 import { RiseIn } from "@/components/motion/rise-in.tsx"
+import { BRAND, BrandMark, MeanderBand } from "@/components/pos/brand.tsx"
 import { Button } from "@/components/ui/button.tsx"
 import { Field, FieldError, FieldLabel } from "@/components/ui/field.tsx"
 import { Input } from "@/components/ui/input.tsx"
@@ -61,29 +62,34 @@ export function LoginPage() {
 
   return (
     <main className="grid min-h-dvh bg-canvas lg:grid-cols-[1.1fr_1fr]">
-      <section className="relative hidden overflow-hidden bg-[oklch(0.3_0.06_45)] p-12 text-[oklch(0.97_0.01_75)] lg:flex lg:flex-col lg:justify-between">
+      {/* The bowl from the logo: brand red, its key-pattern rim, the chef in the middle. */}
+      <section className="relative hidden overflow-hidden bg-brand text-white lg:flex lg:flex-col">
+        <MeanderBand className="text-white/25" />
         <div
           aria-hidden
-          className="pointer-events-none absolute -top-1/4 -left-1/4 size-[80%] rounded-full bg-[oklch(0.62_0.16_42/0.45)] blur-3xl"
+          className="pointer-events-none absolute top-1/3 left-1/2 size-[70%] -translate-x-1/2 rounded-full bg-brand-gold/20 blur-3xl"
         />
-        <div
-          aria-hidden
-          className="pointer-events-none absolute -right-1/4 -bottom-1/3 size-[70%] rounded-full bg-[oklch(0.75_0.14_85/0.25)] blur-3xl"
-        />
-        <div className="relative flex items-center gap-3">
-          <span className="grid size-11 place-items-center rounded-2xl bg-white/10 backdrop-blur">
-            <StoreIcon className="size-5" />
-          </span>
-          <span className="font-heading text-lg font-medium">Warung Senja</span>
-        </div>
-        <RiseIn className="relative max-w-md">
-          <p className="font-heading text-4xl leading-tight font-semibold text-balance">
-            Pesanan cepat, dapur tahu seketika.
-          </p>
-          <p className="mt-4 text-base text-white/70">
-            Denah meja, snack bar, stok dan laporan pemilik dalam satu tablet.
-          </p>
+        <RiseIn className="relative flex flex-1 flex-col items-center justify-center gap-8 px-12 text-center">
+          <BrandMark size="xl" />
+          <div className="space-y-2">
+            <p className="font-heading text-5xl font-semibold tracking-wide">
+              {BRAND.hanzi}
+            </p>
+            <p className="font-heading text-xl font-medium text-white/85">
+              {BRAND.name}
+            </p>
+          </div>
+          <div className="max-w-md space-y-3">
+            <p className="font-heading text-2xl leading-snug font-semibold text-balance">
+              {t("auth.heroTitle")}
+            </p>
+            <p className="text-base text-white/75">{t("auth.heroBody")}</p>
+          </div>
         </RiseIn>
+        <div className="relative bg-brand-deep/60 px-12 py-4 text-center text-sm text-white/80">
+          {t("auth.heroFooter")}
+        </div>
+        <MeanderBand className="text-white/25" />
       </section>
 
       <section className="relative flex items-center justify-center p-6 sm:p-10">
@@ -92,6 +98,14 @@ export function LoginPage() {
           <ThemeSwitch />
         </div>
         <RiseIn className="w-full max-w-sm">
+          {/* On a narrow screen the brand panel is hidden, so the mark sits above the form. */}
+          <div className="mb-8 flex items-center gap-3 lg:hidden">
+            <BrandMark size="lg" />
+            <div>
+              <p className="font-heading text-xl font-semibold">{BRAND.name}</p>
+              <p className="text-sm text-muted-foreground">{BRAND.hanzi}</p>
+            </div>
+          </div>
           <h1 className="font-heading text-3xl font-semibold tracking-tight">
             {t("auth.signInTitle")}
           </h1>

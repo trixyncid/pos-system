@@ -82,7 +82,7 @@ export const staff: MockStaff[] = [
   {
     id: 1,
     username: "rina",
-    email: "owner@warungsenja.test",
+    email: "owner@yicipang.test",
     full_name: "Rina Wijaya",
     password: "demo1234",
     is_active: true,
@@ -93,7 +93,7 @@ export const staff: MockStaff[] = [
   {
     id: 2,
     username: "dimas",
-    email: "dimas@warungsenja.test",
+    email: "dimas@yicipang.test",
     full_name: "Dimas Pratama",
     password: "demo1234",
     is_active: true,

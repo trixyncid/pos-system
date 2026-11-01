@@ -2,10 +2,34 @@
   "version": "0.0.1",
   "configurations": [
     {
+      "name": "frontend",
+      "runtimeExecutable": "bun",
+      "runtimeArgs": [
+        "--cwd=frontend",
+        "run",
+        "dev"
+      ],
+      "port": 3000
+    },
+    {
       "name": "frontend-mock",
       "runtimeExecutable": "bun",
-      "runtimeArgs": ["--cwd=frontend", "run", "dev:mock"],
+      "runtimeArgs": [
+        "--cwd=frontend",
+        "run",
+        "dev:mock"
+      ],
       "port": 3000
+    },
+    {
+      "name": "frontend-preview",
+      "runtimeExecutable": "bun",
+      "runtimeArgs": [
+        "--cwd=frontend",
+        "run",
+        "preview"
+      ],
+      "port": 3001
     }
   ]
 }

@@ -1,6 +1,7 @@
 import type { TFunction } from "i18next"
 
 import type { Promo } from "@/features/promos/schemas/promo.ts"
+import { localeTag } from "@/lib/i18n.ts"
 import { formatIDR } from "@/lib/money.ts"
 
 /** "10% off the bill", "Rp 5.000 off items", "Buy 2, get 1 free". */
@@ -39,12 +40,9 @@ export function describeLimits(promo: Promo, t: TFunction) {
 
 /** Monday-first short day names in the current language. */
 export function dayNames(language: string) {
-  const format = new Intl.DateTimeFormat(
-    language === "en" ? "en-GB" : "id-ID",
-    {
-      weekday: "short",
-    }
-  )
+  const format = new Intl.DateTimeFormat(localeTag(language), {
+    weekday: "short",
+  })
   // 2024-01-01 was a Monday.
   return Array.from({ length: 7 }, (_, day) =>
     format.format(new Date(2024, 0, 1 + day))

@@ -1,40 +1,49 @@
 # Printing
 
-Kitchen tickets and receipts print with no dialog, on LAN ESC/POS printers. One Android tablet runs the app inside Capacitor as the **Print Station**.
+Kitchen tickets, bills, receipts and shift reports print with no dialog on ESC/POS thermal printers (Iware XS-80BT, 80 mm). The **cashier PC** is the print station: the POS running there prints the whole queue in the background, through a small **print agent** on the same PC.
 
 ```
-Any tablet ─POST send─▶ API ─PrintJob(s) routed category→printer─▶ WS "print" stream
-                                                                       │
-            Android Print Station (Capacitor) ◀────────────────────────┘
-              encoder → ESC/POS bytes → TCP :9100 → LAN printer → ACK printed / failed
+Any tablet ─POST send─▶ API ─PrintJob per station (kitchen / bar / cashier)─▶ WS "print" stream
+                                                                                    │
+  Cashier PC: POS in Chrome (PrintRunner, on every screen) ◀────────────────────────┘
+     ticket layout → ESC/POS bytes → print agent (127.0.0.1:9123) → printer → ACK printed / failed
 ```
 
 ## Why this design
 
-- A browser cannot open a raw TCP socket, and iPad Safari has no Bluetooth API. `window.print()` always shows a dialog, and most thermal printers don't support AirPrint.
-- A cloud API cannot reach a printer on the restaurant's LAN. The Print Station sits on that LAN and pulls jobs over the WebSocket the API already has.
-
-## Status (M5)
-
-- **Built:**
-  - Print jobs in the API, routed by station.
-  - The print station page, which auto-prints, acknowledges and offers retry, reprint and test pages.
-  - ESC/POS encoding (`frontend/src/features/printing/lib/ticket-doc.ts`) and the kitchen and cancellation ticket layouts (`tickets.ts`).
-  - `PreviewTransport`.
-- **Next:** `CapacitorTcpTransport` in the Android shell (M10).
+- A browser cannot open a raw connection to a printer, and `window.print()` can't choose a printer per job. The agent is a tiny local program that can.
+- A cloud API cannot reach printers on the outlet's LAN. The cashier PC sits on that LAN and pulls jobs over the WebSocket the API already has.
+- The ticket layouts stay in the frontend (`features/printing/lib/tickets.ts`), so the on-screen preview is exactly what prints.
 
 ## Pieces
 
-- `PrintTransport` (frontend, M5): `connect()`, `print(bytes)`, `status()`.
-  - `PreviewTransport`: renders the ticket on screen, used in dev and mock mode.
-  - `CapacitorTcpTransport`: native raw socket on the Print Station (M10).
-  - `WebBluetoothTransport`: optional, BLE printers on Android Chrome.
-- Ticket templates (kitchen, bar, receipt, shift report) are pure functions that turn data into `@point-of-sale/receipt-printer-encoder` commands, so they can be unit tested.
-- `PrintJob` rows are keyed by UUID. An unacknowledged job is retried, and reprints are explicit and audited.
-- When the station misses heartbeats, every tablet shows a banner.
+- **API:** `PrintJob` rows, routed by station (`backend/printing`). Receipts and bills go to `cashier`; kitchen and bar tickets by the category's station. Reprints are explicit and audited.
+- **PrintRunner** (`features/printing/components/print-runner.tsx`): mounted for every signed-in screen. It runs only on the device switched on as the printer (**Print station → Cetak dari perangkat ini**) and only for a user with `print_station`. It prints queued jobs oldest first, one at a time, and acknowledges each one.
+- **Device settings** (`features/printing/lib/device.ts`, saved in that browser): on/off, transport, agent address, stations printed here, each station's printer, cash drawer.
+- **Transports** (`features/printing/lib/transport.ts`):
+  - `AgentTransport`: the cashier PC. Sends bytes to the agent with the station's printer.
+  - `PreviewTransport`: development and the demo site. Tickets only show on screen.
+- **Print agent** (`print-agent/`): see its [README](../print-agent/README.md). LAN printers on port 9100, or Windows-shared USB printers.
+- **Cash drawer:** cash receipts add the ESC/POS drawer pulse. The drawer plugs into the cashier printer (RJ-11).
+
+## Failures
+
+- **Agent not running** (not started yet, restarting): jobs stay queued and print by themselves once it answers again. The Print station page shows the agent as offline.
+- **Printer unreachable or out of paper:** the job is marked failed with the reason. The Print station page shows it with **Coba lagi**.
+- **Device turned off as printer:** the page says so. Jobs wait in the queue for the device that prints.
+
+## Setting up the printers
+
+1. Give each printer a fixed IP (a DHCP reservation on the router), e.g. kitchen `192.168.1.50`, cashier `192.168.1.51`.
+2. On the cashier PC, open **Print station**:
+   - turn on **Cetak dari perangkat ini**,
+   - choose **Print agent**,
+   - type each station's printer address and press **Cek**,
+   - then **Tes** to print a test page.
+3. A USB-only printer: share it in Windows and enter `share:<share name>` (see the agent README).
 
 ## Hardware notes
 
-- Give each printer a fixed IP (a DHCP reservation on the router).
-- Use 80mm paper for the kitchen. 58mm is fine for the snack bar receipt.
-- Test with the actual printer models before rollout. Codepage support for Indonesian text varies.
+- 80 mm paper, 48 characters per line. Auto-cutter on.
+- Keep the kitchen printer away from heat, grease and steam.
+- Test the real printers before opening day. Codepage support for accented text varies.

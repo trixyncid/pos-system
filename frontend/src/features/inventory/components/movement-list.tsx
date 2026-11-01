@@ -8,8 +8,9 @@ import {
 import { kindTone } from "@/features/inventory/lib/tones.ts"
 import type { Movement } from "@/features/inventory/schemas/inventory.ts"
 import { cn } from "@/lib/utils.ts"
+import { dateFormat } from "@/lib/locale-format.ts"
 
-const when = new Intl.DateTimeFormat("id-ID", {
+const when = dateFormat({
   day: "numeric",
   month: "short",
   hour: "2-digit",

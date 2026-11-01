@@ -1,7 +1,8 @@
 /**
  * Thirty days of paid orders, so the dashboard and reports have something
- * to show. Seeded random, so every reload tells the same story: a lunch
- * and a dinner peak, busier weekends, a steady snack bar.
+ * to show. Seeded random, so every reload tells the same story: open
+ * Monday to Saturday 07:00–17:00, a breakfast and a lunch rush, a busier
+ * Saturday, a steady snack bar.
  */
 import type { Order, OrderLine } from "@/features/ordering/schemas/order.ts"
 import { audit } from "@/mocks/db/audit.ts"
@@ -24,8 +25,8 @@ const pick = <T>(items: readonly T[]) =>
 const between = (low: number, high: number) =>
   low + Math.floor(random() * (high - low + 1))
 
-/** Restaurant orders per hour, 10:00–22:00: a lunch and a dinner rush. */
-const restaurantCurve = [1, 2, 6, 7, 4, 2, 2, 3, 6, 8, 6, 3, 1]
+/** Restaurant orders per hour, 07:00–17:00: a breakfast and a lunch rush. */
+const restaurantCurve = [3, 5, 4, 3, 6, 8, 5, 3, 2, 1]
 const waiters = ["Sari Lestari", "Agus Setiawan"]
 const manager = staff.find((m) => m.full_name === "Dimas Pratama")!
 const cashier = staff.find((m) => m.full_name === "Budi Santoso")!
@@ -79,11 +80,13 @@ export function generateHistory(now = new Date()) {
   for (let daysAgo = 30; daysAgo >= 0; daysAgo--) {
     const day = new Date(now)
     day.setDate(day.getDate() - daysAgo)
-    const weekend = day.getDay() === 0 || day.getDay() === 6
+    // Yi Ci Pang is closed on Sundays.
+    if (day.getDay() === 0) continue
+    const weekend = day.getDay() === 6
     let number = 100
 
     restaurantCurve.forEach((weight, offset) => {
-      const hour = 10 + offset
+      const hour = 7 + offset
       const count = Math.round(
         weight * (weekend ? 1.4 : 1) * (0.7 + random() * 0.6)
       )
@@ -146,9 +149,9 @@ export function generateHistory(now = new Date()) {
       }
     })
 
-    // The snack bar: steady from 9:00 to 21:00, a little busier after school.
-    for (let hour = 9; hour <= 21; hour++) {
-      const count = between(0, hour >= 15 && hour <= 18 ? 4 : 2)
+    // The snack bar: steady from 07:00 to 17:00, a little busier after school.
+    for (let hour = 7; hour <= 16; hour++) {
+      const count = between(0, hour >= 13 && hour <= 15 ? 4 : 2)
       for (let n = 0; n < count; n++) {
         const closed = new Date(day)
         closed.setHours(hour, between(0, 59), between(0, 59), 0)
@@ -172,7 +175,7 @@ export function generateHistory(now = new Date()) {
 
     if (daysAgo > 0) {
       const close = new Date(day)
-      close.setHours(22, 30, 0, 0)
+      close.setHours(17, 30, 0, 0)
       audit(
         "shift.close",
         cashier,

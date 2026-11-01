@@ -75,12 +75,12 @@ export const productSchema = z.object({
 export type Product = z.infer<typeof productSchema>
 
 const money = z
-  .number({ message: "Isi angka." })
-  .int("Rupiah tanpa desimal.")
-  .min(0, "Tidak boleh minus.")
+  .number({ message: "validation.number" })
+  .int("validation.wholeRupiah")
+  .min(0, "validation.notNegative")
 
 export const categoryFormSchema = z.object({
-  name: z.string().trim().min(1, "Nama kategori wajib diisi."),
+  name: z.string().trim().min(1, "validation.categoryName"),
   station: stationSchema,
   is_active: z.boolean(),
 })
@@ -89,7 +89,7 @@ export type CategoryForm = z.infer<typeof categoryFormSchema>
 export const productFormSchema = z
   .object({
     kind: kindSchema,
-    name: z.string().trim().min(1, "Nama wajib diisi."),
+    name: z.string().trim().min(1, "validation.name"),
     description: z.string().max(300),
     category: z.string().nullable(),
     price: money,
@@ -105,33 +105,33 @@ export const productFormSchema = z
     recipe: z.array(
       z.object({
         ingredient: z.string(),
-        quantity: z.number().positive("Lebih dari 0."),
+        quantity: z.number().positive("validation.moreThanZero"),
       })
     ),
   })
   .refine((value) => value.kind === "ingredient" || value.category, {
     path: ["category"],
-    message: "Pilih kategori.",
+    message: "validation.pickCategory",
   })
 export type ProductForm = z.infer<typeof productFormSchema>
 
 export const modifierGroupFormSchema = z
   .object({
-    name: z.string().trim().min(1, "Nama wajib diisi."),
+    name: z.string().trim().min(1, "validation.name"),
     min_select: z.number().int().min(0),
     max_select: z.number().int().min(1),
     options: z
       .array(
         z.object({
           id: z.string().optional(),
-          name: z.string().trim().min(1, "Nama pilihan wajib diisi."),
+          name: z.string().trim().min(1, "validation.optionName"),
           price_delta: z.number().int(),
         })
       )
-      .min(1, "Tambah minimal satu pilihan."),
+      .min(1, "validation.oneOption"),
   })
   .refine((value) => value.min_select <= value.max_select, {
     path: ["min_select"],
-    message: "Minimal tidak boleh lebih dari maksimal.",
+    message: "validation.minOverMax",
   })
 export type ModifierGroupForm = z.infer<typeof modifierGroupFormSchema>

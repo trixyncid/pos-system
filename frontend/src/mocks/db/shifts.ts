@@ -43,13 +43,23 @@ function dayAt(daysAgo: number, hour: number, minute = 0) {
   return at
 }
 
-// Today's shift opens at 08:00, or half an hour ago when it's earlier than that.
+// Today's shift opens at 06:30, before the 07:00 opening, or half an hour ago when it's earlier than that.
 const openedToday = new Date(
   Math.max(
     dayAt(0, 0, 5).getTime(),
-    Math.min(dayAt(0, 8).getTime(), Date.now() - 30 * 60_000)
+    Math.min(dayAt(0, 6, 30).getTime(), Date.now() - 30 * 60_000)
   )
 )
+
+/** How many days back the `nth` most recent trading day was (closed on Sundays). */
+function tradingDaysAgo(nth: number) {
+  let back = 0
+  for (let found = 0; found < nth;) {
+    back += 1
+    if (dayAt(back, 12).getDay() !== 0) found += 1
+  }
+  return back
+}
 
 function seedClosed(
   daysAgo: number,
@@ -60,10 +70,10 @@ function seedClosed(
 ) {
   const shift: Shift = {
     id: mockId(),
-    created_at: dayAt(daysAgo, 8).toISOString(),
+    created_at: dayAt(daysAgo, 6, 30).toISOString(),
     opened_by_name: by,
     opening_cash: opening,
-    closed_at: dayAt(daysAgo, 22, 30).toISOString(),
+    closed_at: dayAt(daysAgo, 17, 30).toISOString(),
     closed_by_name: by,
     counted_cash: counted,
     expected_cash: opening + sales,
@@ -83,8 +93,8 @@ function seedClosed(
   shifts.push(shift)
 }
 
-seedClosed(2, "Budi Santoso", 500_000, 4_386_400, 4_886_400)
-seedClosed(1, "Budi Santoso", 500_000, 5_120_700, 5_618_700)
+seedClosed(tradingDaysAgo(2), "Budi Santoso", 500_000, 4_386_400, 4_886_400)
+seedClosed(tradingDaysAgo(1), "Budi Santoso", 500_000, 5_120_700, 5_618_700)
 
 // Today's shift is open, so checkout works straight away in the demo.
 const today: Shift = {

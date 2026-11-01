@@ -1,9 +1,11 @@
-const compact = new Intl.NumberFormat("id-ID", {
+import { numberFormat } from "@/lib/locale-format.ts"
+
+const compact = numberFormat({
   notation: "compact",
   maximumFractionDigits: 1,
 })
 
-/** Short rupiah for chart axes: "1,2 jt", "850 rb". */
+/** Short rupiah for chart axes: "1,2 jt", "850 rb" (or "120萬" in Chinese). */
 export function compactIDR(amount: number) {
   return compact.format(amount)
 }

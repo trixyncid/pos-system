@@ -9,6 +9,7 @@ import { ThemeProvider } from "@/components/theme-provider.tsx"
 import { Toaster } from "@/components/ui/sonner.tsx"
 import { env } from "@/lib/env.ts"
 import "@/lib/i18n.ts"
+import { registerServiceWorker } from "@/lib/pwa.ts"
 import { queryClient } from "@/lib/query-client.ts"
 import "@/index.css"
 
@@ -24,6 +25,8 @@ async function prepare() {
     console.error("Mock API could not start", error)
   }
 }
+
+registerServiceWorker()
 
 void prepare().then(() => {
   createRoot(document.getElementById("root")!).render(

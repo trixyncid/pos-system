@@ -20,11 +20,11 @@ export const permissionSchema = z.object({
 export type PermissionInfo = z.infer<typeof permissionSchema>
 
 export const roleFormSchema = z.object({
-  name: z.string().trim().min(1, "Nama peran wajib diisi."),
+  name: z.string().trim().min(1, "validation.roleName"),
   code: z
     .string()
     .trim()
-    .regex(/^[a-z0-9-]+$/, "Huruf kecil, angka dan tanda hubung saja."),
+    .regex(/^[a-z0-9-]+$/, "validation.roleCode"),
   description: z.string(),
   permissions: z.array(z.string()),
 })

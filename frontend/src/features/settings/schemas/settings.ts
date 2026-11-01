@@ -3,17 +3,17 @@ import { z } from "zod"
 import { taxBaseSchema } from "@/features/outlet/schemas/outlet.ts"
 
 export const settingsFormSchema = z.object({
-  name: z.string().trim().min(1, "Nama outlet wajib diisi."),
+  name: z.string().trim().min(1, "validation.outletName"),
   address: z.string(),
   npwpd: z.string().trim().max(40),
   pbjt_percent: z
-    .number({ message: "Isi angka." })
-    .min(0, "Tidak boleh minus.")
-    .max(10, "PBJT maksimal 10%."),
+    .number({ message: "validation.number" })
+    .min(0, "validation.notNegative")
+    .max(10, "validation.pbjtMax"),
   service_percent: z
-    .number({ message: "Isi angka." })
-    .min(0, "Tidak boleh minus.")
-    .max(100, "Maksimal 100%."),
+    .number({ message: "validation.number" })
+    .min(0, "validation.notNegative")
+    .max(100, "validation.max100"),
   tax_base: taxBaseSchema,
   cash_rounding: z.union([z.literal(1), z.literal(100), z.literal(500)]),
   receipt_header: z.string().max(300),

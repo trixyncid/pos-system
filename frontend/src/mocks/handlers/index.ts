@@ -1,6 +1,7 @@
 import { authHandlers } from "@/mocks/handlers/auth.ts"
 import { backofficeHandlers } from "@/mocks/handlers/backoffice.ts"
 import { catalogHandlers } from "@/mocks/handlers/catalog.ts"
+import { displayHandlers } from "@/mocks/handlers/display.ts"
 import { floorHandlers } from "@/mocks/handlers/floor.ts"
 import { inventoryHandlers } from "@/mocks/handlers/inventory.ts"
 import { orderHandlers } from "@/mocks/handlers/orders.ts"
@@ -20,4 +21,5 @@ export const handlers = [
   ...inventoryHandlers,
   ...reportHandlers,
   ...promoHandlers,
+  ...displayHandlers,
 ]

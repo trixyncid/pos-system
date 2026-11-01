@@ -12,3 +12,11 @@ def ok(data=_NO_DATA, status: int = 200) -> Response:
     if data is not _NO_DATA:
         body["data"] = data
     return Response(body, status=status)
+
+
+def fail(status: int, detail: str, code: str | None = None) -> Response:
+    """`{"success": false, "detail": ..., "code": ...}`, the error envelope for a view's own refusal."""
+    body: dict = {"success": False, "detail": detail}
+    if code:
+        body["code"] = code
+    return Response(body, status=status)

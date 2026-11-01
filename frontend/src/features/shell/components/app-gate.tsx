@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next"
 
 import { Button } from "@/components/ui/button.tsx"
 import { useSession } from "@/features/auth/store/session-store.ts"
+import { PrintRunner } from "@/features/printing/components/print-runner.tsx"
 import { useRealtime } from "@/realtime/use-realtime.ts"
 
 function Unreachable() {
@@ -16,9 +17,7 @@ function Unreachable() {
         <span className="mx-auto grid size-16 place-items-center rounded-3xl bg-warning/15 text-warning-ink">
           <WifiOffIcon className="size-7" />
         </span>
-        <p className="text-muted-foreground">
-          Server tidak terjangkau. Periksa Wi-Fi tablet.
-        </p>
+        <p className="text-muted-foreground">{t("common.unreachable")}</p>
         <Button size="touch" onClick={() => void hydrate()}>
           {t("common.retry")}
         </Button>
@@ -39,5 +38,10 @@ export function AppGate() {
   }, [status, navigate])
 
   if (status === "unreachable") return <Unreachable />
-  return <Outlet />
+  return (
+    <>
+      <Outlet />
+      <PrintRunner />
+    </>
+  )
 }

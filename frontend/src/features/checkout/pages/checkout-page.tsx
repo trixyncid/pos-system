@@ -21,6 +21,8 @@ import {
 import { CashPanel } from "@/features/checkout/components/cash-panel.tsx"
 import { DiscountSheet } from "@/features/checkout/components/discount-sheet.tsx"
 import { PaidOverlay } from "@/features/checkout/components/paid-overlay.tsx"
+import { discountLabel } from "@/features/checkout/lib/discount-label.ts"
+import { useCustomerDisplay } from "@/features/display/hooks/use-customer-display.ts"
 import { useOrderQuery } from "@/features/ordering/api/orders.ts"
 import type { Order } from "@/features/ordering/schemas/order.ts"
 import { useBillRules } from "@/features/outlet/hooks/use-bill-rules.ts"
@@ -81,9 +83,40 @@ export function CheckoutPage() {
   const [result, setResult] = useState<{
     change: number
     remaining: number
+    total: number
   } | null>(null)
   // One id per payment attempt: a retry after a dropped connection is not charged twice.
   const paymentId = useRef(newId())
+
+  // The guest sees their bill on the second screen while paying, then the change.
+  const shown = order.data
+  useCustomerDisplay(
+    result
+      ? { view: "paid", total: result.total, change: result.change }
+      : shown && (shown.status === "open" || shown.status === "billed")
+        ? {
+            view: "cart",
+            channel: "restaurant",
+            label: shown.table_label
+              ? t("order.table", { label: shown.table_label })
+              : t("order.takeaway", { number: shown.number }),
+            lines: shown.lines
+              .filter((line) => line.status !== "void")
+              .map((line) => ({
+                id: line.id,
+                name: line.name,
+                quantity: line.quantity,
+                total: line.total,
+                detail:
+                  line.modifiers.map((m) => m.name).join(", ") || undefined,
+              })),
+            bill: shown.bill,
+            discountLabel:
+              shown.bill.discount > 0 ? discountLabel(shown, t) : undefined,
+            due: amountDue(shown, mode, selected, parts, rules),
+          }
+        : null
+  )
 
   const finish = useCallback(() => {
     const settled = (result?.remaining ?? 1) <= 0
@@ -145,6 +178,7 @@ export function CheckoutPage() {
       setResult({
         change: payment?.change ?? 0,
         remaining: updated.remaining,
+        total: payment?.amount ?? 0,
       })
       setTendered("")
       setSelected(new Set())

@@ -1,0 +1,18 @@
+{
+  "id": "/display",
+  "name": "Yi Ci Pang Layar Pelanggan",
+  "short_name": "Yi Ci Pang Layar",
+  "description": "Layar pelanggan: pesanan dan total yang sedang dibayar.",
+  "start_url": "/display",
+  "scope": "/display",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#df2225",
+  "theme_color": "#df2225",
+  "lang": "id",
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

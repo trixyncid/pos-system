@@ -33,12 +33,13 @@ import { apiErrorMessage } from "@/lib/api-error.ts"
 import { formatIDR } from "@/lib/money.ts"
 import { spring } from "@/lib/motion.ts"
 import { cn } from "@/lib/utils.ts"
+import { dateFormat } from "@/lib/locale-format.ts"
 
-const time = new Intl.DateTimeFormat("id-ID", {
+const time = dateFormat({
   hour: "2-digit",
   minute: "2-digit",
 })
-const day = new Intl.DateTimeFormat("id-ID", {
+const day = dateFormat({
   weekday: "short",
   day: "numeric",
   month: "short",

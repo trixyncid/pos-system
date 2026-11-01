@@ -22,6 +22,7 @@ import {
   useUpdateOutlet,
 } from "@/features/outlet/hooks/use-outlet.ts"
 import type { Outlet } from "@/features/outlet/schemas/outlet.ts"
+import { DisplaysSection } from "@/features/display/components/displays-section.tsx"
 import { ReceiptPreview } from "@/features/settings/components/receipt-preview.tsx"
 import {
   settingsFormSchema,
@@ -251,6 +252,8 @@ function SettingsEditor({ outlet }: { outlet: Outlet }) {
             t("settings.footerHint")
           )}
         </Section>
+
+        <DisplaysSection />
       </div>
 
       <aside className="lg:sticky lg:top-6 lg:self-start">

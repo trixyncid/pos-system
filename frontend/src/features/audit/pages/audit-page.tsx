@@ -1,3 +1,4 @@
+import type { TFunction } from "i18next"
 import { SearchIcon } from "lucide-react"
 import { AnimatePresence, motion } from "motion/react"
 import { useDeferredValue, useState } from "react"
@@ -17,6 +18,7 @@ import { today } from "@/lib/dates.ts"
 import { formatIDR } from "@/lib/money.ts"
 import { spring } from "@/lib/motion.ts"
 import { cn } from "@/lib/utils.ts"
+import { dateFormat } from "@/lib/locale-format.ts"
 
 const GROUPS = [
   { value: "", key: "all" },
@@ -26,7 +28,7 @@ const GROUPS = [
   { value: "auth.", key: "auth" },
 ] as const
 
-const when = new Intl.DateTimeFormat("id-ID", {
+const when = dateFormat({
   day: "numeric",
   month: "short",
   hour: "2-digit",
@@ -57,7 +59,7 @@ function tone(action: string): StatusTone {
   return "neutral"
 }
 
-function details(event: AuditEvent) {
+function details(event: AuditEvent, t: TFunction) {
   const { kind } = event.metadata
   return (
     Object.entries(event.metadata)
@@ -76,6 +78,8 @@ function details(event: AuditEvent) {
           text = `${key === "variance" && value > 0 ? "+" : ""}${formatIDR(value)}`
         else if (typeof value === "number" && key === "value")
           text = kind === "percent" ? `${value}%` : formatIDR(value)
+        else if (key === "method")
+          text = t(`audit.methods.${text}`, { defaultValue: text })
         return { key, text }
       })
   )
@@ -108,9 +112,9 @@ function Row({ event }: { event: AuditEvent }) {
             </span>
           )}
         </p>
-        {details(event).length > 0 && (
+        {details(event, t).length > 0 && (
           <p className="flex flex-wrap gap-1.5">
-            {details(event).map(({ key, text }) => (
+            {details(event, t).map(({ key, text }) => (
               <span
                 key={key}
                 className="rounded-lg bg-muted px-2 py-0.5 text-xs"

@@ -77,6 +77,23 @@ jobs:
           -e DOMAIN=api.example.com -e ACME_EMAIL=ci@example.com
           caddy:2-alpine caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
 
+  print-agent:
+    name: Print agent tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: print-agent
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - uses: oven-sh/setup-bun@v2
+
+      - name: Tests (with a stand-in LAN printer)
+        run: bun test
+
   frontend:
     name: Frontend lint, types, tests, build
     runs-on: ubuntu-latest

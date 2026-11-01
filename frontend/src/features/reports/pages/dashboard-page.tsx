@@ -27,8 +27,10 @@ import { isoDate } from "@/lib/dates.ts"
 import { formatIDR } from "@/lib/money.ts"
 import { useNow } from "@/lib/use-now.ts"
 import { cn } from "@/lib/utils.ts"
+import i18n, { localeTag } from "@/lib/i18n.ts"
+import { dateFormat } from "@/lib/locale-format.ts"
 
-const dayName = new Intl.DateTimeFormat("id-ID", {
+const dayName = dateFormat({
   weekday: "long",
   day: "numeric",
   month: "long",
@@ -158,7 +160,9 @@ function Body({ data }: { data: Dashboard }) {
             data.table_turns !== null && (
               <span className="text-xs text-muted-foreground">
                 {t("dashboard.tableTurns", {
-                  turns: data.table_turns.toLocaleString("id-ID"),
+                  turns: data.table_turns.toLocaleString(
+                    localeTag(i18n.language)
+                  ),
                 })}
               </span>
             )
@@ -195,7 +199,7 @@ function Body({ data }: { data: Dashboard }) {
               >
                 {data.food_cost_percent === null
                   ? "—"
-                  : `${data.food_cost_percent.toLocaleString("id-ID")}%`}
+                  : `${data.food_cost_percent.toLocaleString(localeTag(i18n.language))}%`}
               </dd>
             </div>
             <div>

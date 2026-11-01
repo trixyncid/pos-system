@@ -23,14 +23,16 @@ import { downloadCsv } from "@/lib/csv.ts"
 import { isoDate, parseIsoDate } from "@/lib/dates.ts"
 import { formatIDR } from "@/lib/money.ts"
 import { cn } from "@/lib/utils.ts"
+import i18n, { localeTag } from "@/lib/i18n.ts"
+import { dateFormat } from "@/lib/locale-format.ts"
 
-const day = new Intl.DateTimeFormat("id-ID", {
+const day = dateFormat({
   weekday: "short",
   day: "numeric",
   month: "short",
 })
 const percent = (value: number | null) =>
-  value === null ? "—" : `${value.toLocaleString("id-ID")}%`
+  value === null ? "—" : `${value.toLocaleString(localeTag(i18n.language))}%`
 
 function sum(rows: SalesDay[]) {
   const total = rows.reduce(
@@ -228,20 +230,20 @@ export function ReportsPage() {
   const exportCsv = () => {
     const name = `${range.from}_${range.to}`
     if (tab === "sales" && sales.data)
-      downloadCsv(`penjualan_${name}.csv`, [
+      downloadCsv(`${t("reports.csv.salesFile")}_${name}.csv`, [
         [
-          "Tanggal",
-          "Transaksi",
-          "Tamu",
-          "Kotor",
-          "Diskon",
-          "Servis",
-          "PBJT",
-          "Pembulatan",
-          "Penjualan",
-          "Bersih",
-          "HPP",
-          "Food cost %",
+          t("reports.date"),
+          t("reports.orders"),
+          t("reports.covers"),
+          t("reports.gross"),
+          t("reports.discount"),
+          t("reports.service"),
+          t("reports.tax"),
+          t("reports.csv.rounding"),
+          t("reports.sales"),
+          t("reports.csv.net"),
+          t("reports.csv.cost"),
+          t("reports.csv.foodCostPercent"),
         ],
         ...sales.data.rows.map((row) => [
           row.date,
@@ -259,16 +261,16 @@ export function ReportsPage() {
         ]),
       ])
     if (tab === "items" && items.data)
-      downloadCsv(`item_${name}.csv`, [
+      downloadCsv(`${t("reports.csv.itemsFile")}_${name}.csv`, [
         [
-          "Item",
-          "Jenis",
-          "Restoran",
-          "Snack bar",
-          "Jumlah",
-          "Pendapatan",
-          "HPP",
-          "Margin",
+          t("reports.item"),
+          t("reports.csv.kind"),
+          t("reports.restaurant"),
+          t("reports.snackbar"),
+          t("reports.csv.quantity"),
+          t("reports.revenue"),
+          t("reports.csv.cost"),
+          t("reports.margin"),
         ],
         ...items.data.rows.map((row) => [
           row.name,

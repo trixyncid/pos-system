@@ -50,7 +50,12 @@ export function wrap(text: string, width: number) {
   return lines.length ? lines : [""]
 }
 
-export function encode(doc: TicketDoc, columns: Columns): Uint8Array {
+/** `drawer` adds the pulse that opens a cash drawer wired to this printer. */
+export function encode(
+  doc: TicketDoc,
+  columns: Columns,
+  { drawer = false }: { drawer?: boolean } = {}
+): Uint8Array {
   const encoder = new ReceiptPrinterEncoder({ language: "esc-pos", columns })
   encoder.initialize().codepage("auto")
   for (const block of doc) {
@@ -85,5 +90,7 @@ export function encode(doc: TicketDoc, columns: Columns): Uint8Array {
         break
     }
   }
-  return encoder.newline(3).cut().encode()
+  encoder.newline(3).cut()
+  if (drawer) encoder.pulse()
+  return encoder.encode()
 }

@@ -35,10 +35,11 @@ import type { Staff } from "@/features/staff/schemas/staff.ts"
 import { apiErrorMessage } from "@/lib/api-error.ts"
 import { spring } from "@/lib/motion.ts"
 import { cn } from "@/lib/utils.ts"
+import { dateFormat } from "@/lib/locale-format.ts"
 
 type Filter = "true" | "false" | "all"
 
-const seen = new Intl.DateTimeFormat("id-ID", {
+const seen = dateFormat({
   day: "numeric",
   month: "short",
   hour: "2-digit",

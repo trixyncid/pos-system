@@ -41,6 +41,8 @@ class AuthTests(TestCase):
         self.assertTrue(cookie["httponly"])
         self.assertEqual(cookie["path"], settings.REFRESH_COOKIE_PATH)
         self.assertTrue(AuditEvent.objects.filter(action="auth.login", actor=self.owner).exists())
+        self.owner.refresh_from_db()
+        self.assertIsNotNone(self.owner.last_login)
 
     def test_native_login_returns_refresh_in_body(self):
         response = APIClient().post(LOGIN, {"username": "rina", "password": "Str0ng-pass!"}, format="json")

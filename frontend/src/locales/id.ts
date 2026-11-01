@@ -1,6 +1,7 @@
 /** Bahasa Indonesia: the default. Every key here must also exist in en.ts (the type enforces it). */
 export const id = {
   common: {
+    unreachable: "Server tidak terjangkau. Periksa Wi-Fi tablet.",
     language: "Bahasa",
     darkMode: "Mode gelap",
     showPassword: "Tampilkan kata sandi",
@@ -19,6 +20,11 @@ export const id = {
     comingSoonBody: "Layar ini dibangun di milestone {{milestone}}.",
   },
   auth: {
+    heroTitle: "Masakan vegetarian, pesanan cepat sampai dapur.",
+    heroBody:
+      "Pesanan meja, snack bar, stok dan laporan pemilik dalam satu sistem.",
+    heroFooter:
+      "Jl. Ade Irma Suryani No. 68, Samarinda · Senin–Sabtu 07.00–17.00",
     signInTitle: "Masuk",
     signInBody: "Masuk dengan username dan kata sandi Anda sendiri.",
     username: "Username",
@@ -741,6 +747,16 @@ export const id = {
     lowStock_other: "{{count}} barang stoknya menipis atau habis",
   },
   reports: {
+    csv: {
+      salesFile: "penjualan",
+      itemsFile: "item",
+      rounding: "Pembulatan",
+      net: "Bersih",
+      cost: "HPP",
+      foodCostPercent: "Food cost %",
+      kind: "Jenis",
+      quantity: "Jumlah",
+    },
     presets: {
       today: "Hari ini",
       yesterday: "Kemarin",
@@ -779,6 +795,7 @@ export const id = {
     noRecipeShort: "Tanpa resep",
   },
   audit: {
+    methods: { cash: "Tunai", qris: "QRIS", card: "Kartu" },
     title: "Log audit",
     subtitle:
       "Siapa melakukan apa: void, diskon, kas, stok dan akses. Tidak bisa diubah atau dihapus.",
@@ -997,9 +1014,25 @@ export const id = {
     refundedNote: "Direfund {{time}} oleh {{by}}, disetujui {{approver}}",
   },
   station: {
+    thisDevice: "Perangkat ini",
+    enabled: "Cetak dari perangkat ini",
+    enabledHint:
+      "Nyalakan hanya di PC kasir. Tiket dicetak di latar belakang, di layar mana pun.",
+    agent: "Print agent",
+    agentUrl: "Alamat print agent",
+    checking: "Memeriksa…",
+    drawer: "Buka laci kas untuk struk tunai",
+    address: "Printer {{station}}",
+    addressPlaceholder: "192.168.1.50 atau share:XS80",
+    badAddress: "Alamat printer tidak dikenali.",
+    check: "Cek",
+    reachable: "Printer {{station}} terhubung",
+    notPrinting:
+      'Perangkat ini tidak mencetak. Nyalakan "Cetak dari perangkat ini" di PC kasir.',
+    transports: { Preview: "Pratinjau", Agent: "Print agent" },
     testSent: "Tes dikirim ke {{station}}",
     title: "Print station",
-    subtitle: "Tablet ini mencetak tiket untuk stasiun yang dipilih.",
+    subtitle: "Printer untuk perangkat ini: dapur, bar dan struk kasir.",
     stations: "Stasiun",
     kitchen: "Dapur",
     bar: "Bar",
@@ -1007,8 +1040,7 @@ export const id = {
     transport: "Printer",
     ready: "Siap",
     offline: "Tidak terhubung",
-    previewNote:
-      "Mode pratinjau: tiket tampil di layar. Printer LAN tersambung lewat aplikasi Android (M10).",
+    previewNote: "Mode pratinjau: tiket hanya tampil di layar, tidak dicetak.",
     test: "Tes {{station}}",
     queued: "Antre",
     printing: "Mencetak",
@@ -1021,6 +1053,71 @@ export const id = {
     pickStation: "Pilih minimal satu stasiun.",
     today: "Hari ini",
     stats: "{{printed}} tercetak · {{failed}} gagal",
+  },
+  validation: {
+    outletName: "Nama outlet wajib diisi.",
+    number: "Isi angka.",
+    notNegative: "Tidak boleh minus.",
+    pbjtMax: "PBJT maksimal 10%.",
+    max100: "Maksimal 100%.",
+    roleName: "Nama peran wajib diisi.",
+    roleCode: "Huruf kecil, angka dan tanda hubung saja.",
+    wholeRupiah: "Rupiah tanpa desimal.",
+    categoryName: "Nama kategori wajib diisi.",
+    name: "Nama wajib diisi.",
+    moreThanZero: "Lebih dari 0.",
+    pickCategory: "Pilih kategori.",
+    optionName: "Nama pilihan wajib diisi.",
+    oneOption: "Tambah minimal satu pilihan.",
+    minOverMax: "Minimal tidak boleh lebih dari maksimal.",
+    enterUsername: "Masukkan username.",
+    enterPassword: "Masukkan kata sandi.",
+    username: "3–30 huruf kecil, angka, titik, - atau _.",
+    email: "Masukkan email yang benar.",
+    min8: "Minimal 8 karakter.",
+    newPassword: "Buat kata sandi untuk masuk.",
+  },
+  display: {
+    pairTitle: "Hubungkan layar pelanggan",
+    pairHow:
+      "Di layar kasir, buka menu akun → Layar pelanggan, lalu masukkan kode ini.",
+    welcome: "Selamat datang!",
+    items_one: "{{count}} item",
+    items_other: "{{count}} item",
+    empty: "Pesanan akan tampil di sini.",
+    subtotal: "Subtotal",
+    discount: "Diskon",
+    service: "Service",
+    tax: "PBJT",
+    rounding: "Pembulatan",
+    total: "Total",
+    dueNow: "Dibayar sekarang",
+    thanks: "Terima kasih!",
+    paid: "Dibayar",
+    change: "Kembalian",
+    reconnecting: "Menyambung ulang…",
+    menu: "Layar pelanggan",
+    sheetTitle: "Layar pelanggan",
+    sheetBody:
+      "Buka /display di layar kedua. Masukkan kode 6 angka yang tampil di sana.",
+    code: "Kode layar",
+    codeInvalid: "Masukkan 6 angka.",
+    connect: "Hubungkan",
+    connected: "Terhubung: {{name}}",
+    connectedBody:
+      "Tagihan dan barang yang di-scan di layar ini tampil untuk pelanggan.",
+    disconnect: "Lepas dari PC ini",
+    paired: "Layar pelanggan terhubung",
+    unpaired: "Layar pelanggan dilepas",
+    settingsTitle: "Layar pelanggan",
+    settingsBody:
+      "Layar yang menampilkan pesanan ke pelanggan. Hapus untuk memutus dan meminta kode baru.",
+    settingsEmpty:
+      "Belum ada layar. Buka /display di layar kedua, lalu hubungkan dari menu akun kasir.",
+    pairedBy: "Dihubungkan oleh {{name}}",
+    lastSeen: "Terakhir aktif {{when}}",
+    remove: "Hapus",
+    removed: "Layar dihapus",
   },
   errors: {
     forbiddenTitle: "Tidak ada akses",

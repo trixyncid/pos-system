@@ -1,6 +1,7 @@
 """Sign-in with email and password, PIN unlock on a signed-in tablet, refresh, logout and the current user."""
 
 from django.conf import settings
+from django.contrib.auth.models import update_last_login
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema
 from rest_framework.exceptions import AuthenticationFailed
@@ -70,6 +71,7 @@ class LoginView(APIView):
         if user is None or not valid or not user.is_active:
             emit(request, "auth.login_failed", metadata={"username": name})
             return _fail(401, "Username or password is incorrect.", "invalid_credentials")
+        update_last_login(None, user)
         emit(request, "auth.login", actor=user)
         return session_response(request, auth_payload(user))
 

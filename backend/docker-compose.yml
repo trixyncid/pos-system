@@ -17,6 +17,8 @@ services:
     volumes:
       - .:/app
       - media_volume:/app/media
+      # The mock photos, for `manage.py seed_demo`.
+      - ../frontend/public/mock:/frontend/public/mock:ro
     depends_on:
       db:
         condition: service_healthy

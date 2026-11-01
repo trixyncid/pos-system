@@ -1,4 +1,5 @@
-import { ChevronDownIcon, LogOutIcon } from "lucide-react"
+import { ChevronDownIcon, LogOutIcon, MonitorIcon } from "lucide-react"
+import { useState } from "react"
 import { useTranslation } from "react-i18next"
 import { toast } from "sonner"
 
@@ -11,13 +12,20 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu.tsx"
+import { useCan } from "@/features/auth/hooks/use-can.ts"
+import { perm } from "@/features/auth/lib/permissions.ts"
 import { useSession } from "@/features/auth/store/session-store.ts"
+import { PairDisplaySheet } from "@/features/display/components/pair-display-sheet.tsx"
+import { usePairedDisplay } from "@/features/display/api/display.ts"
 
-/** Who is signed in, and Sign out. */
+/** Who is signed in, the customer display link for cashiers, and Sign out. */
 export function UserMenu() {
   const { t } = useTranslation()
   const user = useSession((state) => state.user)
   const signOut = useSession((state) => state.signOut)
+  const canPay = useCan(perm.takePayment)
+  const paired = usePairedDisplay((state) => state.paired)
+  const [displayOpen, setDisplayOpen] = useState(false)
   if (!user) return null
 
   return (
@@ -45,6 +53,16 @@ export function UserMenu() {
           </span>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
+        {canPay && (
+          <DropdownMenuItem
+            className="h-11"
+            onSelect={() => setDisplayOpen(true)}
+          >
+            <MonitorIcon />
+            <span className="flex-1">{t("display.menu")}</span>
+            {paired && <span className="size-2 rounded-full bg-success" />}
+          </DropdownMenuItem>
+        )}
         <DropdownMenuItem
           className="h-11"
           variant="destructive"
@@ -56,6 +74,10 @@ export function UserMenu() {
           {t("common.signOut")}
         </DropdownMenuItem>
       </DropdownMenuContent>
+      <PairDisplaySheet
+        open={displayOpen}
+        onClose={() => setDisplayOpen(false)}
+      />
     </DropdownMenu>
   )
 }

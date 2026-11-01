@@ -1,5 +1,5 @@
 import { CalendarIcon, ChevronDownIcon } from "lucide-react"
-import { enUS, id as idLocale } from "react-day-picker/locale"
+import { enUS, id as idLocale, zhTW } from "react-day-picker/locale"
 import { useState } from "react"
 import type { DateRange } from "react-day-picker"
 import { useTranslation } from "react-i18next"
@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/popover.tsx"
 import type { Range } from "@/features/reports/api/reports.ts"
 import { isoDate, parseIsoDate } from "@/lib/dates.ts"
+import { localeTag } from "@/lib/i18n.ts"
 import { cn } from "@/lib/utils.ts"
 
 /** The API's limit (backend reports.services.MAX_DAYS). */
@@ -62,15 +63,17 @@ export function DateRangePicker({
   const { t, i18n } = useTranslation()
   const [open, setOpen] = useState(false)
   const [draft, setDraft] = useState<DateRange | undefined>()
-  const locale = i18n.language === "en" ? enUS : idLocale
-  const format = new Intl.DateTimeFormat(
-    i18n.language === "en" ? "en-GB" : "id-ID",
-    {
-      day: "numeric",
-      month: "short",
-      year: "numeric",
-    }
-  )
+  const locale =
+    i18n.language === "en"
+      ? enUS
+      : i18n.language === "zh-Hant"
+        ? zhTW
+        : idLocale
+  const format = new Intl.DateTimeFormat(localeTag(i18n.language), {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  })
   const from = parseIsoDate(value.from)
   const to = parseIsoDate(value.to)
   const today = startOfToday()

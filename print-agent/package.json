@@ -1,0 +1,12 @@
+{
+  "name": "yicipang-print-agent",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Sends POS tickets from the browser to LAN and Windows-shared ESC/POS printers.",
+  "scripts": {
+    "dev": "bun run src/main.ts",
+    "test": "bun test",
+    "build:win": "bun build src/main.ts --compile --minify --target=bun-windows-x64 --outfile dist/yicipang-print-agent.exe"
+  }
+}

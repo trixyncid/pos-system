@@ -2,6 +2,7 @@ import type { Messages } from "@/lib/i18n.ts"
 
 export const en: Messages = {
   common: {
+    unreachable: "Can't reach the server. Check the tablet's Wi-Fi.",
     language: "Language",
     darkMode: "Dark mode",
     showPassword: "Show password",
@@ -20,6 +21,10 @@ export const en: Messages = {
     comingSoonBody: "This screen is built in milestone {{milestone}}.",
   },
   auth: {
+    heroTitle: "Vegetarian cooking, with orders straight to the kitchen.",
+    heroBody:
+      "Table orders, the snack bar, stock and the owner's reports in one system.",
+    heroFooter: "Jl. Ade Irma Suryani No. 68, Samarinda · Mon–Sat 07:00–17:00",
     signInTitle: "Sign in",
     signInBody: "Sign in with your own username and password.",
     username: "Username",
@@ -741,6 +746,16 @@ export const en: Messages = {
     lowStock_other: "{{count}} items are low or out of stock",
   },
   reports: {
+    csv: {
+      salesFile: "sales",
+      itemsFile: "items",
+      rounding: "Rounding",
+      net: "Net",
+      cost: "Cost of goods",
+      foodCostPercent: "Food cost %",
+      kind: "Type",
+      quantity: "Quantity",
+    },
     presets: {
       today: "Today",
       yesterday: "Yesterday",
@@ -779,6 +794,7 @@ export const en: Messages = {
     noRecipeShort: "No recipe",
   },
   audit: {
+    methods: { cash: "Cash", qris: "QRIS", card: "Card" },
     title: "Audit log",
     subtitle:
       "Who did what: voids, discounts, cash, stock and access. It can't be edited or deleted.",
@@ -991,9 +1007,26 @@ export const en: Messages = {
     refundedNote: "Refunded {{time}} by {{by}}, approved by {{approver}}",
   },
   station: {
+    thisDevice: "This device",
+    enabled: "Print from this device",
+    enabledHint:
+      "Turn on only on the cashier PC. Tickets print in the background, on any screen.",
+    agent: "Print agent",
+    agentUrl: "Print agent address",
+    checking: "Checking…",
+    drawer: "Open the cash drawer for cash receipts",
+    address: "{{station}} printer",
+    addressPlaceholder: "192.168.1.50 or share:XS80",
+    badAddress: "That printer address isn't recognised.",
+    check: "Check",
+    reachable: "{{station}} printer is reachable",
+    notPrinting:
+      'This device doesn\'t print. Turn on "Print from this device" on the cashier PC.',
+    transports: { Preview: "Preview", Agent: "Print agent" },
     testSent: "Test sent to {{station}}",
     title: "Print station",
-    subtitle: "This tablet prints tickets for the stations picked.",
+    subtitle:
+      "Printers for this device: kitchen, bar and the cashier's receipts.",
     stations: "Stations",
     kitchen: "Kitchen",
     bar: "Bar",
@@ -1001,8 +1034,7 @@ export const en: Messages = {
     transport: "Printer",
     ready: "Ready",
     offline: "Not connected",
-    previewNote:
-      "Preview mode: tickets show on screen. LAN printers connect through the Android app (M10).",
+    previewNote: "Preview mode: tickets only show on screen; nothing prints.",
     test: "Test {{station}}",
     queued: "Queued",
     printing: "Printing",
@@ -1015,6 +1047,71 @@ export const en: Messages = {
     pickStation: "Pick at least one station.",
     today: "Today",
     stats: "{{printed}} printed · {{failed}} failed",
+  },
+  validation: {
+    outletName: "Enter the outlet's name.",
+    number: "Enter a number.",
+    notNegative: "Can't be negative.",
+    pbjtMax: "PBJT is at most 10%.",
+    max100: "At most 100%.",
+    roleName: "Enter the role's name.",
+    roleCode: "Lowercase letters, numbers and dashes only.",
+    wholeRupiah: "Whole rupiah, no decimals.",
+    categoryName: "Enter the category's name.",
+    name: "Enter a name.",
+    moreThanZero: "More than 0.",
+    pickCategory: "Pick a category.",
+    optionName: "Enter the option's name.",
+    oneOption: "Add at least one option.",
+    minOverMax: "The minimum can't be more than the maximum.",
+    enterUsername: "Enter your username.",
+    enterPassword: "Enter your password.",
+    username: "3–30 lowercase letters, numbers, dots, - or _.",
+    email: "Enter a valid email.",
+    min8: "At least 8 characters.",
+    newPassword: "Set a password to sign in with.",
+  },
+  display: {
+    pairTitle: "Connect the customer display",
+    pairHow:
+      "On the cashier screen, open the account menu → Customer display, then enter this code.",
+    welcome: "Welcome!",
+    items_one: "{{count}} item",
+    items_other: "{{count}} items",
+    empty: "The order will show here.",
+    subtotal: "Subtotal",
+    discount: "Discount",
+    service: "Service",
+    tax: "PBJT",
+    rounding: "Rounding",
+    total: "Total",
+    dueNow: "Paying now",
+    thanks: "Thank you!",
+    paid: "Paid",
+    change: "Change",
+    reconnecting: "Reconnecting…",
+    menu: "Customer display",
+    sheetTitle: "Customer display",
+    sheetBody:
+      "Open /display on the second screen and enter the 6-digit code it shows.",
+    code: "Display code",
+    codeInvalid: "Enter 6 digits.",
+    connect: "Connect",
+    connected: "Connected: {{name}}",
+    connectedBody:
+      "Bills and scanned items on this screen are shown to the customer.",
+    disconnect: "Disconnect from this PC",
+    paired: "Customer display connected",
+    unpaired: "Customer display disconnected",
+    settingsTitle: "Customer displays",
+    settingsBody:
+      "Screens that show the order to customers. Remove one to cut it off and make it ask for a new code.",
+    settingsEmpty:
+      "No displays yet. Open /display on the second screen, then connect it from the cashier's account menu.",
+    pairedBy: "Connected by {{name}}",
+    lastSeen: "Last active {{when}}",
+    remove: "Remove",
+    removed: "Display removed",
   },
   errors: {
     forbiddenTitle: "No access",
