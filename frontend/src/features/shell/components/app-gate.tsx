@@ -6,6 +6,8 @@ import { useTranslation } from "react-i18next"
 import { Button } from "@/components/ui/button.tsx"
 import { useSession } from "@/features/auth/store/session-store.ts"
 import { PrintRunner } from "@/features/printing/components/print-runner.tsx"
+import { OfflineReady } from "@/features/snackbar/components/offline-ready.tsx"
+import { useOutboxSync } from "@/features/snackbar/hooks/use-outbox-sync.ts"
 import { useRealtime } from "@/realtime/use-realtime.ts"
 
 function Unreachable() {
@@ -31,6 +33,7 @@ export function AppGate() {
   const status = useSession((state) => state.status)
   const navigate = useNavigate()
   useRealtime()
+  useOutboxSync()
 
   // Signing out (or the API ending the session) leaves the signed-in screens.
   useEffect(() => {
@@ -42,6 +45,7 @@ export function AppGate() {
     <>
       <Outlet />
       <PrintRunner />
+      <OfflineReady />
     </>
   )
 }

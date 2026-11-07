@@ -30,6 +30,7 @@ Any tablet ─POST send─▶ API ─PrintJob per station (kitchen / bar / cashi
 
 - **Agent not running** (not started yet, restarting): jobs stay queued and print by themselves once it answers again. The Print station page shows the agent as offline.
 - **Printer unreachable or out of paper:** the job is marked failed with the reason. The Print station page shows it with **Coba lagi**.
+- **No internet:** a snack bar sale made offline prints its receipt and tickets straight from the cashier PC (`features/printing/lib/print-local.ts`), without the server's queue. When the sale syncs, the server queues nothing for it, unless the PC couldn't print, in which case it prints then.
 - **Device turned off as printer:** the page says so. Jobs wait in the queue for the device that prints.
 
 ## Setting up the printers

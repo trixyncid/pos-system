@@ -5,6 +5,8 @@
  * call on startup.
  */
 const hintKey = "pos.session"
+/** Who is signed in (name and permissions, nothing secret), so the app opens with no internet. */
+const userKey = "pos.session.user"
 
 let accessToken: string | null = null
 
@@ -32,6 +34,23 @@ export function setSession(access: string) {
 export function clearSession() {
   accessToken = null
   storage()?.removeItem(hintKey)
+  storage()?.removeItem(userKey)
+}
+
+export function rememberUser(user: unknown) {
+  try {
+    storage()?.setItem(userKey, JSON.stringify(user))
+  } catch {
+    // Storage blocked: the app then needs the server to start.
+  }
+}
+
+export function rememberedUser(): unknown {
+  try {
+    return JSON.parse(storage()?.getItem(userKey) ?? "null")
+  } catch {
+    return null
+  }
 }
 
 /**

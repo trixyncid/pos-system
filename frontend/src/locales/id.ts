@@ -623,6 +623,30 @@ export const id = {
     coins: "Koin",
     noDrawer: "Kas masuk/keluar butuh izin buka laci.",
   },
+  offline: {
+    badge: "Offline",
+    sending: "Mengirim",
+    banner:
+      "Tidak ada internet. Snack bar tetap bisa berjualan; meja dan pesanan menunggu koneksi kembali.",
+    snackbarPill: "Offline · penjualan disimpan",
+    savedSale:
+      "Tidak ada internet: penjualan disimpan di PC ini dan terkirim sendiri saat online.",
+    synced_one: "{{count}} penjualan offline terkirim",
+    synced_other: "{{count}} penjualan offline terkirim",
+    queuedTitle_one: "Belum terkirim ({{count}})",
+    queuedTitle_other: "Belum terkirim ({{count}})",
+    waiting: "Menunggu",
+    refused: "Ditolak",
+    remove: "Hapus",
+    removeConfirm:
+      "Hapus penjualan ini? Penjualan ini tidak akan tercatat di laporan.",
+    closeBlocked_one:
+      "{{count}} penjualan offline belum terkirim. Tutup shift setelah internet kembali dan penjualan terkirim.",
+    closeBlocked_other:
+      "{{count}} penjualan offline belum terkirim. Tutup shift setelah internet kembali dan penjualan terkirim.",
+    receiptLater: "Struk tercetak saat internet kembali",
+    cantSignOut: "Tidak bisa keluar saat offline: masuk lagi butuh internet.",
+  },
   snackbar: {
     ready: "Siap scan",
     search: "Cari nama, SKU atau barcode",

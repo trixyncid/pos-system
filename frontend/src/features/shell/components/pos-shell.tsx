@@ -12,6 +12,10 @@ import {
   LanguageMenu,
   ThemeSwitch,
 } from "@/features/shell/components/preferences.tsx"
+import {
+  OfflineBadge,
+  OfflineBanner,
+} from "@/features/shell/components/offline-badge.tsx"
 import { UserMenu } from "@/features/shell/components/user-menu.tsx"
 import { spring } from "@/lib/motion.ts"
 import { useNow } from "@/lib/use-now.ts"
@@ -78,6 +82,7 @@ export function PosShell() {
         </nav>
 
         <div className="flex shrink-0 items-center gap-1 xl:gap-2">
+          <OfflineBadge />
           <span className="hidden font-heading text-lg font-medium tabular-nums xl:block">
             {clock.format(now)}
           </span>
@@ -94,6 +99,8 @@ export function PosShell() {
           <UserMenu />
         </div>
       </header>
+      {/* The snack bar says it in its own header, and keeps selling. */}
+      {!pathname.startsWith("/snackbar") && <OfflineBanner />}
       <main className="min-h-0 flex-1">
         <Outlet />
       </main>

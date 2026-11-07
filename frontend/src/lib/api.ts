@@ -1,5 +1,6 @@
 import axios, { type AxiosError, type InternalAxiosRequestConfig } from "axios"
 
+import { isOfflineError, setOnline } from "@/lib/connectivity.ts"
 import { env } from "@/lib/env.ts"
 import { clearSession, getAccessToken, setSession } from "@/lib/session.ts"
 
@@ -90,8 +91,13 @@ api.interceptors.request.use((config) => {
 })
 
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    setOnline(true)
+    return response
+  },
   async (error: AxiosError) => {
+    if (isOfflineError(error)) setOnline(false)
+    else if (error.response) setOnline(true)
     const original = error.config as RetryConfig | undefined
     if (error.response?.status !== 401 || !original || original._retry) {
       return Promise.reject(error)

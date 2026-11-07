@@ -615,6 +615,30 @@ export const en: Messages = {
     coins: "Coins",
     noDrawer: "Cash in/out needs the open drawer permission.",
   },
+  offline: {
+    badge: "Offline",
+    sending: "Sending",
+    banner:
+      "No internet. The snack bar keeps selling; tables and orders wait for the connection.",
+    snackbarPill: "Offline · sales kept",
+    savedSale:
+      "No internet: the sale is kept on this PC and sent by itself once online.",
+    synced_one: "{{count}} offline sale sent",
+    synced_other: "{{count}} offline sales sent",
+    queuedTitle_one: "Not sent yet ({{count}})",
+    queuedTitle_other: "Not sent yet ({{count}})",
+    waiting: "Waiting",
+    refused: "Refused",
+    remove: "Remove",
+    removeConfirm: "Remove this sale? It will not be in the reports.",
+    closeBlocked_one:
+      "{{count}} offline sale is not sent yet. Close the shift once the internet is back and it has been sent.",
+    closeBlocked_other:
+      "{{count}} offline sales are not sent yet. Close the shift once the internet is back and they have been sent.",
+    receiptLater: "The receipt prints when the internet is back",
+    cantSignOut:
+      "You can't sign out while offline: signing in again needs the internet.",
+  },
   snackbar: {
     ready: "Ready to scan",
     search: "Search name, SKU or barcode",

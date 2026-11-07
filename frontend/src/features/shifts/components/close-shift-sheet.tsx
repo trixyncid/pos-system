@@ -22,6 +22,7 @@ import {
   type Count,
 } from "@/features/shifts/components/cash-count.tsx"
 import { signedIDR, varianceTone } from "@/features/shifts/lib/variance.ts"
+import { useOutbox } from "@/features/snackbar/store/outbox.ts"
 import type { Shift } from "@/features/shifts/schemas/shift.ts"
 import { apiErrorMessage } from "@/lib/api-error.ts"
 import { cn } from "@/lib/utils.ts"
@@ -32,6 +33,8 @@ function Body({ shift, onDone }: { shift: Shift; onDone: () => void }) {
   const canSeeOrders = useCan(perm.takeOrder)
   const open = useOpenOrdersQuery(canSeeOrders)
   const unpaid = open.data?.filter((o) => o.status === "billed").length ?? 0
+  // Sales made offline aren't in the drawer's expected cash until they sync.
+  const queued = useOutbox((state) => state.sales.length)
   const [mode, setMode] = useState<"count" | "total">("count")
   const [count, setCount] = useState<Count>(emptyCount)
   const [total, setTotal] = useState("")
@@ -61,6 +64,15 @@ function Body({ shift, onDone }: { shift: Shift; onDone: () => void }) {
 
   return (
     <div className="space-y-5">
+      {queued > 0 && (
+        <p
+          role="alert"
+          className="flex items-start gap-2 rounded-2xl bg-danger/12 p-3 text-sm text-danger-ink"
+        >
+          <AlertTriangleIcon className="mt-0.5 size-4 shrink-0" />
+          {t("offline.closeBlocked", { count: queued })}
+        </p>
+      )}
       {unpaid > 0 && (
         <p className="flex items-start gap-2 rounded-2xl bg-warning/15 p-3 text-sm text-warning-ink">
           <AlertTriangleIcon className="mt-0.5 size-4 shrink-0" />
@@ -143,7 +155,7 @@ function Body({ shift, onDone }: { shift: Shift; onDone: () => void }) {
       <Button
         size="xl"
         className="w-full"
-        disabled={!touched || close.isPending}
+        disabled={!touched || close.isPending || queued > 0}
         onClick={() => void submit()}
       >
         {close.isPending && <Spinner />}

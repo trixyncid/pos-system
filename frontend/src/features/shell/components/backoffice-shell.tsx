@@ -18,6 +18,7 @@ import {
   LanguageMenu,
   ThemeSwitch,
 } from "@/features/shell/components/preferences.tsx"
+import { OfflineBadge } from "@/features/shell/components/offline-badge.tsx"
 import { UserMenu } from "@/features/shell/components/user-menu.tsx"
 import { spring } from "@/lib/motion.ts"
 import { cn } from "@/lib/utils.ts"
@@ -153,6 +154,7 @@ export function BackofficeShell() {
           >
             {collapsed ? <PanelLeftOpenIcon /> : <PanelLeftCloseIcon />}
           </Button>
+          <OfflineBadge />
           <LanguageMenu />
           <ThemeSwitch />
           <UserMenu />

@@ -9,8 +9,10 @@ import { ThemeProvider } from "@/components/theme-provider.tsx"
 import { Toaster } from "@/components/ui/sonner.tsx"
 import { env } from "@/lib/env.ts"
 import "@/lib/i18n.ts"
+import { keepOfflineCache, restoreOfflineCache } from "@/lib/offline-cache.ts"
 import { registerServiceWorker } from "@/lib/pwa.ts"
 import { queryClient } from "@/lib/query-client.ts"
+import { hasSessionHint } from "@/lib/session.ts"
 import "@/index.css"
 
 async function prepare() {
@@ -27,6 +29,9 @@ async function prepare() {
 }
 
 registerServiceWorker()
+// The snack bar keeps selling through an internet outage from this saved copy.
+if (hasSessionHint()) restoreOfflineCache(queryClient)
+keepOfflineCache(queryClient)
 
 void prepare().then(() => {
   createRoot(document.getElementById("root")!).render(

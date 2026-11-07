@@ -1,6 +1,8 @@
 import uuid
+from datetime import timedelta
 
 from django.test import TestCase
+from django.utils import timezone
 from rest_framework.test import APIClient
 
 from accounts.models import GroupProfile, User
@@ -50,7 +52,7 @@ class CounterSaleTests(TestCase):
     def open_shift(self):
         self.client.post(f"{API}shifts/", {"opening_cash": 100_000}, format="json")
 
-    def sell(self, sale_id=None, tendered=50_000):
+    def sell(self, sale_id=None, tendered=50_000, **extra):
         return self.client.post(
             f"{API}sales/",
             {
@@ -60,6 +62,7 @@ class CounterSaleTests(TestCase):
                     {"id": uid(), "product": str(self.chips.pk), "quantity": 2},
                     {"id": uid(), "product": str(self.coffee.pk)},
                 ],
+                **extra,
             },
             format="json",
         )
@@ -94,6 +97,41 @@ class CounterSaleTests(TestCase):
         self.assertIn("tendered", response.data["errors"])
         self.assertEqual(Order.objects.count(), 0)
         self.assertFalse(PrintJob.objects.filter(kind=JobKind.KITCHEN).exists())
+
+    def test_an_offline_sale_is_recorded_when_and_by_whom_it_happened(self):
+        self.open_shift()
+        owner = User.objects.create_user(None, full_name="Rina", is_superuser=True)
+        self.client.force_authenticate(owner)  # Whoever is signed in when the PC syncs.
+        sold_at = timezone.now() - timedelta(hours=2)
+        self.chips.is_available = False  # Sold out since; it was on the shelf then.
+        self.chips.price = 15_000  # And dearer: the cash taken then no longer covers it.
+        self.chips.save()
+        response = self.sell(sold_at=sold_at.isoformat(), cashier=self.cashier.pk, printed=True, tendered=50_000)
+        self.assertEqual(response.status_code, 201, response.content)
+        order = Order.objects.get()
+        payment = order.payments.get()
+        self.assertEqual((order.opened_by, payment.received_by), (self.cashier, self.cashier))
+        self.assertEqual((order.closed_at, payment.created_at), (sold_at, sold_at))
+        self.assertEqual((payment.tendered, payment.change), (50_000, 0))
+        self.assertFalse(PrintJob.objects.exists())  # The PC printed it at the time.
+
+    def test_an_offline_sale_the_pc_could_not_print_prints_when_it_syncs(self):
+        self.open_shift()
+        self.sell(sold_at=(timezone.now() - timedelta(minutes=5)).isoformat(), cashier=self.cashier.pk)
+        self.assertEqual(set(PrintJob.objects.values_list("kind", flat=True)), {JobKind.RECEIPT, JobKind.KITCHEN})
+
+    def test_offline_sale_limits(self):
+        self.open_shift()
+        too_old = self.sell(sold_at=(timezone.now() - timedelta(days=8)).isoformat())
+        self.assertIn("sold_at", too_old.data["errors"])
+        online = self.sell(cashier=self.cashier.pk)
+        self.assertIn("cashier", online.data["errors"])
+        not_cashier = self.sell(sold_at=timezone.now().isoformat(), cashier=self.waiter.pk)
+        self.assertIn("cashier", not_cashier.data["errors"])
+        future = self.sell(sold_at=(timezone.now() + timedelta(hours=1)).isoformat())
+        self.assertEqual(future.status_code, 201)
+        self.assertLessEqual(Order.objects.get().closed_at, timezone.now())
+        self.assertEqual(Order.objects.count(), 1)
 
     def test_waiter_cannot_sell(self):
         self.client.force_authenticate(self.waiter)

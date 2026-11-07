@@ -18,12 +18,15 @@ export function PaidOverlay({
   remaining,
   onDone,
   doneLabel,
+  receiptNote,
 }: {
   change: number
   remaining: number
   onDone: () => void
   /** The settled button; "Back to the floor" by default. */
   doneLabel?: string
+  /** Where the receipt comes from, when not the usual "printed at the cashier". */
+  receiptNote?: string
 }) {
   const { t } = useTranslation()
   const reduce = useReducedMotion()
@@ -81,7 +84,7 @@ export function PaidOverlay({
           </h2>
           <p className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
             <PrinterIcon className="size-4" />
-            {t("checkout.receiptPrinted")}
+            {receiptNote ?? t("checkout.receiptPrinted")}
           </p>
         </div>
 

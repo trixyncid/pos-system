@@ -6,6 +6,7 @@ payments reach the bill total; then it closes and its table is free again.
 from __future__ import annotations
 
 import uuid
+from datetime import timedelta
 
 from django.db import transaction
 from django.utils import timezone
@@ -102,11 +103,24 @@ def print_bill(*, user, order_id):
 
 
 @transaction.atomic
-def pay(*, user, order_id, payment_id, method: str, tendered: int, amount: int | None, line_ids: list | None):
+def pay(
+    *,
+    user,
+    order_id,
+    payment_id,
+    method: str,
+    tendered: int,
+    amount: int | None,
+    line_ids: list | None,
+    queue_prints: bool = True,
+    sold_offline: bool = False,
+):
     """
     Take one payment. With `line_ids` the guest pays for those items (their
     share of discount, service and tax); with `amount` a part of what is left
-    (an even split); with neither, everything that is left.
+    (an even split); with neither, everything that is left. `queue_prints`
+    and `sold_offline` are for a sale replayed from the cashier PC's offline
+    queue (see `sell`).
     """
     existing = Payment.objects.filter(pk=payment_id).first()
     if existing is not None:
@@ -142,7 +156,9 @@ def pay(*, user, order_id, payment_id, method: str, tendered: int, amount: int |
     else:
         due = remaining
 
-    if method == Method.CASH and tendered < due:
+    # The cash changed hands long ago when the sale was offline; a price
+    # changed since then must not refuse to record it.
+    if method == Method.CASH and tendered < due and not sold_offline:
         raise ValidationError({"tendered": ["Not enough cash."]})
     payment = Payment.objects.create(
         id=payment_id,
@@ -151,7 +167,7 @@ def pay(*, user, order_id, payment_id, method: str, tendered: int, amount: int |
         method=method,
         amount=due,
         tendered=tendered if method == Method.CASH else due,
-        change=tendered - due if method == Method.CASH else 0,
+        change=max(0, tendered - due) if method == Method.CASH else 0,
         received_by=user,
     )
     if lines:
@@ -161,30 +177,58 @@ def pay(*, user, order_id, payment_id, method: str, tendered: int, amount: int |
         order.status = OrderStatus.PAID
         order.closed_at = timezone.now()
         order.save(update_fields=["status", "closed_at", "updated_at"])
-    _queue(order, user, JobKind.RECEIPT, payment=payment)
+    if queue_prints:
+        _queue(order, user, JobKind.RECEIPT, payment=payment)
     _changed(order)
     return order, payment
 
 
+# How old a sale from the cashier PC's offline queue may be.
+OFFLINE_MAX_AGE = timedelta(days=7)
+
+
 @transaction.atomic
-def sell(*, user, sale_id, lines: list, tendered: int, method: str = Method.CASH):
+def sell(
+    *,
+    user,
+    sale_id,
+    lines: list,
+    tendered: int,
+    method: str = Method.CASH,
+    sold_at=None,
+    printed: bool = False,
+    cashier=None,
+):
     """
     A snack bar counter sale in one step: the order, its lines (anything
     with a kitchen or bar station still gets a ticket), the payment and the
     receipt. A retried request returns the sale it already made.
+
+    A sale the cashier PC made while the internet was down arrives later
+    with `sold_at` (when it happened) and `cashier` (who made it). It is
+    recorded as sold then, by them, even if a product has since sold out or
+    changed price. With `printed` the PC already printed its receipt and
+    tickets, so nothing is queued again.
     """
-    from orders.models import Channel, Order, OrderType
+    from orders.models import Channel, Order, OrderLine, OrderType
     from orders.services import add_lines, open_order
 
     existing = Order.objects.filter(pk=sale_id).first()
     if existing is not None:
         return existing
+    offline = sold_at is not None
+    if offline:
+        now = timezone.now()
+        if sold_at < now - OFFLINE_MAX_AGE:
+            raise ValidationError({"sold_at": ["This offline sale is too old to record. Enter it by hand."]})
+        sold_at = min(sold_at, now)
+        user = cashier or user
     require_open_shift()  # Before anything is created, so a closed drawer leaves nothing behind.
     order = open_order(
         user=user, order_id=sale_id, table=None, guests=1, type=OrderType.TAKEAWAY, channel=Channel.SNACKBAR
     )
-    add_lines(user=user, order_id=order.pk, lines=lines, send=True)
-    order, _ = pay(
+    add_lines(user=user, order_id=order.pk, lines=lines, send=True, queue_prints=not printed, sold_offline=offline)
+    order, payment = pay(
         user=user,
         order_id=order.pk,
         payment_id=uuid.uuid4(),
@@ -192,7 +236,15 @@ def sell(*, user, sale_id, lines: list, tendered: int, method: str = Method.CASH
         tendered=tendered,
         amount=None,
         line_ids=None,
+        queue_prints=not printed,
+        sold_offline=offline,
     )
+    if offline:
+        # Reports and the day's history follow when it was sold, not when it synced.
+        Order.objects.filter(pk=order.pk).update(created_at=sold_at, closed_at=sold_at)
+        OrderLine.objects.filter(order=order).update(created_at=sold_at, sent_at=sold_at)
+        Payment.objects.filter(pk=payment.pk).update(created_at=sold_at)
+        order.refresh_from_db()
     return order
 
 

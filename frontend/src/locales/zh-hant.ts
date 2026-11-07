@@ -590,6 +590,27 @@ export const zhHant: Messages = {
     coins: "硬幣",
     noDrawer: "現金收支需要「開錢櫃」權限。",
   },
+  offline: {
+    badge: "離線",
+    sending: "傳送中",
+    banner: "目前沒有網路。小賣部仍可繼續銷售；桌位和點單需等待連線恢復。",
+    snackbarPill: "離線 · 銷售已保存",
+    savedSale: "沒有網路：這筆銷售已保存在此電腦，連線後會自動傳送。",
+    synced_one: "已傳送 {{count}} 筆離線銷售",
+    synced_other: "已傳送 {{count}} 筆離線銷售",
+    queuedTitle_one: "尚未傳送（{{count}}）",
+    queuedTitle_other: "尚未傳送（{{count}}）",
+    waiting: "等待中",
+    refused: "被拒絕",
+    remove: "刪除",
+    removeConfirm: "刪除這筆銷售？它將不會出現在報表中。",
+    closeBlocked_one:
+      "還有 {{count}} 筆離線銷售尚未傳送。請在網路恢復並傳送後再關班。",
+    closeBlocked_other:
+      "還有 {{count}} 筆離線銷售尚未傳送。請在網路恢復並傳送後再關班。",
+    receiptLater: "收據將在網路恢復後列印",
+    cantSignOut: "離線時無法登出：重新登入需要網路。",
+  },
   snackbar: {
     ready: "可以掃描",
     search: "搜尋名稱、SKU 或條碼",

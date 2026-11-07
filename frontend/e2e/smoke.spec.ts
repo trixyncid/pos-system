@@ -3,7 +3,7 @@ import { expect, test, type Page } from "@playwright/test"
 async function signIn(page: Page, username: string) {
   await page.goto("/login")
   await page.getByLabel("Username").fill(username)
-  await page.getByLabel("Kata sandi").fill("demo1234")
+  await page.getByLabel("Kata sandi", { exact: true }).fill("demo1234")
   await page.getByRole("button", { name: "Masuk", exact: true }).click()
 }
 
@@ -23,7 +23,7 @@ test("a waiter signs in to their own account and only takes orders", async ({
 test("a wrong password is refused", async ({ page }) => {
   await page.goto("/login")
   await page.getByLabel("Username").fill("budi")
-  await page.getByLabel("Kata sandi").fill("nope1234")
+  await page.getByLabel("Kata sandi", { exact: true }).fill("nope1234")
   await page.getByRole("button", { name: "Masuk", exact: true }).click()
   await expect(page.getByRole("alert")).toBeVisible()
   await expect(page).toHaveURL(/\/login$/)
@@ -48,17 +48,20 @@ test("owner adds a waiter who then signs in with their own account", async ({
 
   await page.getByRole("button", { name: "Tambah staf" }).click()
   await page.getByLabel("Nama lengkap").fill("Nina Kartika")
-  await page.getByLabel("Username").fill("nina")
-  await page.getByLabel("Kata sandi").fill("nina12345")
+  await page.getByLabel("Username", { exact: true }).fill("nina")
+  await page.getByLabel("Kata sandi", { exact: true }).fill("nina12345")
   await page.getByRole("checkbox", { name: "Pelayan" }).click()
   await page.getByRole("button", { name: "Simpan" }).click()
   await expect(page.getByText("Nina Kartika ditambahkan")).toBeVisible()
 
-  await page.getByRole("button", { name: /Rina Wijaya/ }).click()
+  await page
+    .getByRole("banner")
+    .getByRole("button", { name: /Rina Wijaya/ })
+    .click()
   await page.getByRole("menuitem", { name: "Keluar" }).click()
   await expect(page).toHaveURL(/\/login$/)
-  await page.getByLabel("Username").fill("nina")
-  await page.getByLabel("Kata sandi").fill("nina12345")
+  await page.getByLabel("Username", { exact: true }).fill("nina")
+  await page.getByLabel("Kata sandi", { exact: true }).fill("nina12345")
   await page.getByRole("button", { name: "Masuk", exact: true }).click()
   await expect(page).toHaveURL(/\/floor$/)
 })
@@ -96,6 +99,8 @@ test("a cashier takes a discount and is paid in cash", async ({ page }) => {
   await expect(page).toHaveURL(/\/order\//)
   await page.getByRole("button", { name: "Diskon" }).click()
   const sheet = page.getByRole("dialog", { name: "Diskon tagihan" })
+  // Cashiers open on the promo list; a manual discount is the other tab.
+  await sheet.getByRole("radio", { name: "Diskon manual" }).click()
   await sheet.getByRole("radio", { name: "10%" }).click()
   await sheet.getByRole("radio", { name: "Pelanggan tetap" }).click()
   await sheet.getByRole("button", { name: "Pakai diskon" }).click()
@@ -112,17 +117,33 @@ test("a cashier takes a discount and is paid in cash", async ({ page }) => {
   ).toBeVisible()
 })
 
+/**
+ * A scanner gun types the code a few milliseconds per key, then Enter. Sent
+ * in one go: separate key presses can drift past the scanner's 50 ms on a
+ * busy machine and then read as someone typing.
+ */
+async function scan(page: Page, code: string) {
+  await page.evaluate(
+    (keys) => {
+      for (const key of keys)
+        window.dispatchEvent(new KeyboardEvent("keydown", { key }))
+    },
+    [...code, "Enter"]
+  )
+}
+
 test("the snack bar sells a scanned item for cash", async ({ page }) => {
   await signIn(page, "budi")
   await page.getByRole("link", { name: "Snack bar" }).click()
   await expect(page.getByText("Siap scan")).toBeVisible()
+  // The products must be in before a scan can find one.
+  await expect(
+    page.getByRole("button", { name: /Keripik Kentang 68g/ })
+  ).toBeVisible()
 
-  // A scanner gun types the code a few milliseconds per key, then Enter.
-  for (const key of [..."8991000000000", "Enter"])
-    await page.keyboard.press(key)
+  await scan(page, "8991000000000")
   await expect(page.getByRole("button", { name: /^Bayar · Rp/ })).toBeEnabled()
-  for (const key of [..."0000000000000", "Enter"])
-    await page.keyboard.press(key)
+  await scan(page, "0000000000000")
   await expect(
     page.getByText("Barcode 0000000000000 tidak dikenal.")
   ).toBeVisible()

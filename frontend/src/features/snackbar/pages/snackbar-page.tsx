@@ -2,9 +2,12 @@ import { Link } from "@tanstack/react-router"
 import {
   BanknoteIcon,
   CameraIcon,
+  CloudOffIcon,
   HistoryIcon,
   PackagePlusIcon,
+  RotateCwIcon,
   SearchIcon,
+  Trash2Icon,
   XIcon,
 } from "lucide-react"
 import { AnimatePresence, motion } from "motion/react"
@@ -23,13 +26,19 @@ import { Skeleton } from "@/components/ui/skeleton.tsx"
 import { useCan } from "@/features/auth/hooks/use-can.ts"
 import { pageByKey } from "@/features/auth/lib/page-catalog.ts"
 import { perm } from "@/features/auth/lib/permissions.ts"
-import { useProductsQuery } from "@/features/catalog/api/catalog.ts"
+import { useSession } from "@/features/auth/store/session-store.ts"
+import {
+  useCategoriesQuery,
+  useProductsQuery,
+} from "@/features/catalog/api/catalog.ts"
 import type { Product } from "@/features/catalog/schemas/catalog.ts"
 import type { PayMethod } from "@/features/checkout/api/checkout.ts"
 import { CashPanel } from "@/features/checkout/components/cash-panel.tsx"
 import { useCustomerDisplay } from "@/features/display/hooks/use-customer-display.ts"
 import { PaidOverlay } from "@/features/checkout/components/paid-overlay.tsx"
 import { useBillRules } from "@/features/outlet/hooks/use-bill-rules.ts"
+import { useOutletQuery } from "@/features/outlet/hooks/use-outlet.ts"
+import { printLocally } from "@/features/printing/lib/print-local.ts"
 import { useCurrentShiftQuery } from "@/features/shifts/api/shifts.ts"
 import { useSell, useTodaySalesQuery } from "@/features/snackbar/api/sales.ts"
 import {
@@ -40,8 +49,18 @@ import {
   CounterCart,
   CounterTotals,
 } from "@/features/snackbar/components/counter-cart.tsx"
-import { useCounterCart } from "@/features/snackbar/store/cart.ts"
+import { offlineTickets } from "@/features/snackbar/lib/offline-tickets.ts"
+import {
+  useCounterCart,
+  type CounterLine,
+} from "@/features/snackbar/store/cart.ts"
+import {
+  pendingSales,
+  useOutbox,
+  type QueuedSale,
+} from "@/features/snackbar/store/outbox.ts"
 import { apiErrorMessage } from "@/lib/api-error.ts"
+import { isOfflineError, useConnectivity } from "@/lib/connectivity.ts"
 import { billTotals, formatIDR } from "@/lib/money.ts"
 import { useScanner } from "@/lib/scanner.ts"
 import { useDebouncedValue } from "@/lib/use-debounced-value.ts"
@@ -110,6 +129,53 @@ function ProductTile({
   )
 }
 
+function QueuedRow({ sale }: { sale: QueuedSale }) {
+  const { t } = useTranslation()
+  const remove = useOutbox((state) => state.remove)
+  const canRemove = useCan(perm.voidSentItem)
+  return (
+    <li
+      className={cn(
+        "space-y-1 rounded-2xl border border-dashed px-4 py-3",
+        sale.error ? "border-danger/50 bg-danger/8" : "border-warning/60"
+      )}
+    >
+      <div className="flex items-center gap-3">
+        <StatusPill tone={sale.error ? "danger" : "warning"}>
+          {sale.error ? t("offline.refused") : t("offline.waiting")}
+        </StatusPill>
+        <span className="min-w-0 flex-1 truncate text-sm text-muted-foreground">
+          {sale.lines.map((l) => `${l.quantity}× ${l.name}`).join(", ")}
+        </span>
+        <span className="text-xs text-muted-foreground">
+          {time.format(new Date(sale.body.sold_at))}
+        </span>
+        <span className="font-medium tabular-nums">
+          {formatIDR(sale.total)}
+        </span>
+      </div>
+      {sale.error && (
+        <div className="flex items-center gap-2 text-sm text-danger-ink">
+          <span className="min-w-0 flex-1">{sale.error}</span>
+          {canRemove && (
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => {
+                if (window.confirm(t("offline.removeConfirm")))
+                  remove(sale.body.id)
+              }}
+            >
+              <Trash2Icon />
+              {t("offline.remove")}
+            </Button>
+          )}
+        </div>
+      )}
+    </li>
+  )
+}
+
 function HistorySheet({
   open,
   onClose,
@@ -119,6 +185,8 @@ function HistorySheet({
 }) {
   const { t } = useTranslation()
   const sales = useTodaySalesQuery()
+  const queued = useOutbox((state) => state.sales)
+  const retry = useOutbox((state) => state.retry)
   const total = sales.data?.reduce((sum, sale) => sum + sale.paid, 0) ?? 0
   return (
     <TouchSheet
@@ -131,6 +199,26 @@ function HistorySheet({
         total: formatIDR(total),
       })}
     >
+      {queued.length > 0 && (
+        <section className="mb-4 space-y-2">
+          <div className="flex items-center gap-2">
+            <h3 className="flex-1 text-sm font-semibold">
+              {t("offline.queuedTitle", { count: queued.length })}
+            </h3>
+            {queued.some((sale) => sale.error) && (
+              <Button size="sm" variant="secondary" onClick={retry}>
+                <RotateCwIcon />
+                {t("common.retry")}
+              </Button>
+            )}
+          </div>
+          <ul className="space-y-2">
+            {queued.map((sale) => (
+              <QueuedRow key={sale.body.id} sale={sale} />
+            ))}
+          </ul>
+        </section>
+      )}
       <ul className="space-y-2">
         {sales.data?.map((sale) => (
           <li
@@ -165,6 +253,11 @@ export function SnackbarPage() {
   const { t } = useTranslation()
   const retail = useProductsQuery("retail")
   const menu = useProductsQuery("menu")
+  const categories = useCategoriesQuery()
+  const outlet = useOutletQuery()
+  const user = useSession((state) => state.user)
+  const online = useConnectivity((state) => state.online)
+  const queued = useOutbox((state) => pendingSales(state.sales).length)
   const shift = useCurrentShiftQuery()
   const rules = useBillRules()
   const sell = useSell()
@@ -186,6 +279,8 @@ export function SnackbarPage() {
   const [result, setResult] = useState<{
     change: number
     total: number
+    /** Sold offline and this PC couldn't print: the receipt prints once it syncs. */
+    receiptLater?: boolean
   } | null>(null)
 
   // Anything sold at the counter: retail goods, and menu items with no choices to make.
@@ -259,24 +354,77 @@ export function SnackbarPage() {
         p.barcode?.includes(query)
     )
 
-  const submit = async () => {
-    try {
-      const order = await sell.mutateAsync({
-        id: saleId,
-        method,
-        tendered: method === "cash" ? Number(tendered) : 0,
-        lines: lines.map((l) => ({
-          id: l.id,
-          product: l.product,
-          quantity: l.quantity,
-        })),
+  const done = (total: number, change: number, receiptLater = false) => {
+    setPaying(false)
+    setResult({ change, total, receiptLater })
+    setTendered("")
+    clear()
+  }
+
+  // Which kitchen or bar a counter line goes to (from its category), for offline tickets.
+  const stationOf = (line: CounterLine) => {
+    const product = sellable.find((p) => p.id === line.product)
+    return (
+      categories.data?.find((c) => c.id === product?.category)?.station ??
+      "none"
+    )
+  }
+
+  /**
+   * No internet: the sale is kept on this PC with its own receipt, printed
+   * here, and sent once the server answers. The cash is in the drawer either way.
+   */
+  const sellOffline = async (body: Parameters<typeof sell.mutateAsync>[0]) => {
+    if (!user) return
+    const cash = method === "cash"
+    const change = cash ? Math.max(0, body.tendered - bill.total) : 0
+    const soldAt = new Date().toISOString()
+    const printed = await printLocally(
+      offlineTickets({
+        lines,
+        stationOf,
+        bill,
+        outlet: outlet.data,
+        payment: {
+          method,
+          amount: bill.total,
+          tendered: cash ? body.tendered : bill.total,
+          change,
+        },
+        by: user.full_name,
+        at: soldAt,
       })
-      setPaying(false)
+    )
+    useOutbox.getState().add({
+      body: { ...body, sold_at: soldAt, cashier: user.id, printed },
+      total: bill.total,
+      cashierName: user.full_name,
+      lines: lines.map((l) => ({ name: l.name, quantity: l.quantity })),
+      error: null,
+    })
+    toast.info(t("offline.savedSale"))
+    done(bill.total, change, !printed)
+  }
+
+  const submit = async () => {
+    const body = {
+      id: saleId,
+      method,
+      tendered: method === "cash" ? Number(tendered) : 0,
+      lines: lines.map((l) => ({
+        id: l.id,
+        product: l.product,
+        quantity: l.quantity,
+      })),
+    }
+    if (!online) return sellOffline(body)
+    try {
+      const order = await sell.mutateAsync(body)
       const payment = order.payments.at(-1)
-      setResult({ change: payment?.change ?? 0, total: payment?.amount ?? 0 })
-      setTendered("")
-      clear()
+      done(payment?.amount ?? 0, payment?.change ?? 0)
     } catch (error) {
+      // The connection dropped on the way: keep it here instead of losing the sale.
+      if (isOfflineError(error)) return sellOffline(body)
       toast.error(apiErrorMessage(error))
     }
   }
@@ -287,9 +435,16 @@ export function SnackbarPage() {
     <div className="grid h-full min-h-0 grid-cols-[minmax(0,1fr)_24rem]">
       <div className="flex min-h-0 flex-col">
         <header className="flex shrink-0 flex-wrap items-center gap-3 border-b px-4 py-3">
-          <StatusPill tone="success" pulse>
-            {t("snackbar.ready")}
-          </StatusPill>
+          {online ? (
+            <StatusPill tone="success" pulse>
+              {t("snackbar.ready")}
+            </StatusPill>
+          ) : (
+            <StatusPill tone="warning">
+              <CloudOffIcon className="size-3.5" />
+              {t("offline.snackbarPill")}
+            </StatusPill>
+          )}
           <form
             className="relative min-w-56 flex-1"
             onSubmit={(event) => {
@@ -320,6 +475,11 @@ export function SnackbarPage() {
           <Button variant="ghost" size="touch" onClick={() => setHistory(true)}>
             <HistoryIcon />
             {t("snackbar.today")}
+            {queued > 0 && (
+              <span className="rounded-full bg-warning/20 px-2 text-xs font-semibold text-warning-ink tabular-nums">
+                {queued}
+              </span>
+            )}
           </Button>
         </header>
 
@@ -470,6 +630,9 @@ export function SnackbarPage() {
             change={result.change}
             remaining={0}
             doneLabel={t("snackbar.nextCustomer")}
+            receiptNote={
+              result.receiptLater ? t("offline.receiptLater") : undefined
+            }
             onDone={() => setResult(null)}
           />
         )}

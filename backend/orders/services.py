@@ -136,7 +136,15 @@ def _modifier_snapshot(product: Product, modifier_ids: list) -> tuple[list[dict]
 
 
 @transaction.atomic
-def add_lines(*, user: User, order_id, lines: list[LineInput], send: bool) -> Order:
+def add_lines(
+    *, user: User, order_id, lines: list[LineInput], send: bool, queue_prints: bool = True, sold_offline: bool = False
+) -> Order:
+    """
+    Add lines, and with `send` pass them to the kitchen. `queue_prints=False`
+    skips the tickets (the cashier PC already printed them while offline);
+    `sold_offline` records what was physically sold even if the product has
+    since been marked sold out or taken off the menu.
+    """
     order = _locked(order_id)
     _assert_open(order)
     known = set(OrderLine.objects.filter(pk__in=[line.id for line in lines]).values_list("pk", flat=True))
@@ -145,9 +153,9 @@ def add_lines(*, user: User, order_id, lines: list[LineInput], send: bool) -> Or
         if line.id in known:
             continue  # Already saved by an earlier attempt of this request.
         product = line.product
-        if product.kind == ProductKind.INGREDIENT or not product.is_active:
+        if product.kind == ProductKind.INGREDIENT or not (product.is_active or sold_offline):
             raise ValidationError({"lines": [f"{product.name} is not for sale."]})
-        if not product.is_available:
+        if not (product.is_available or sold_offline):
             raise ValidationError({"lines": [f"{product.name} is sold out."], "code": "sold_out"})
         if line.seat is not None and not 1 <= line.seat <= max(order.guests, 1):
             raise ValidationError({"lines": [f"Seat {line.seat} is not at this table."]})
@@ -171,19 +179,19 @@ def add_lines(*, user: User, order_id, lines: list[LineInput], send: bool) -> Or
     if created:
         _unbill(order)
     if send and created:
-        _send(order, user, created)
+        _send(order, user, created, queue_prints=queue_prints)
     _changed(order)
     return order
 
 
-def _send(order: Order, user: User, lines: list[OrderLine]) -> list[PrintJob]:
+def _send(order: Order, user: User, lines: list[OrderLine], *, queue_prints: bool = True) -> list[PrintJob]:
     now = timezone.now()
     for line in lines:
         line.status = LineStatus.SENT
         line.sent_at = now
     OrderLine.objects.bulk_update(lines, ["status", "sent_at"])
     inventory.deduct_sale(order=order, lines=lines, user=user)
-    return _queue_tickets(order, user, lines, JobKind.KITCHEN)
+    return _queue_tickets(order, user, lines, JobKind.KITCHEN) if queue_prints else []
 
 
 def _queue_tickets(order: Order, user: User, lines: list[OrderLine], kind: str) -> list[PrintJob]:

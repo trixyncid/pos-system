@@ -142,6 +142,8 @@ Orders also carry `refunded_at`, `refund_reason`, `refunded_by_name`, `refund_ap
 | GET | `/sales/` | Today's paid counter sales, newest first (30) |
 | POST | `/sales/` | `{ id, lines: [{ id, product, quantity }], method: cash|qris, tendered }`. One transaction: opens a `snackbar` order, adds and sends the lines (menu items still get kitchen/bar tickets), takes the payment (QRIS is the exact total) and prints the receipt. Idempotent by `id`. Fails as a whole on `no_open_shift`, a sold-out item or too little cash. Audited as `order.sale`. |
 
+**Offline sales.** A sale the cashier PC made with no internet arrives later from its queue with three more fields: `sold_at` (when it happened, at most 7 days ago; a future time is clamped to now), `cashier` (the user id who sold it, who must be able to take payments; accepted only with `sold_at`) and `printed` (the PC already printed the receipt and tickets, so none are queued). It is recorded at `sold_at`, by `cashier`, in the shift open when it syncs, even if a product has since sold out, left the menu or changed price (too little cash is then not an error). Audited as `order.sale` with `offline: true`.
+
 The scanner looks products up on the tablet from the cached catalog (`GET /catalog/products/?kind=retail` and `kind=menu`); `?barcode=` is the exact server-side lookup.
 
 **Tax per line.** Each order line keeps a snapshot of its product's `tax_category`. PBJT is charged only on the `pbjt` part of the bill; retail goods (`ppn`, `none`) are priced tax-inclusive or untaxed. Counter sales (`channel: snackbar`) carry no service charge.

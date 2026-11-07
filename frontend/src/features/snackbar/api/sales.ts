@@ -31,15 +31,17 @@ export type SaleBody = {
 }
 
 /** One request: the order, the payment and the receipt. Retrying with the same id never sells twice. */
+export async function sendSale(body: SaleBody) {
+  const { data } = await api.post<{ data: unknown }>("/sales/", body, {
+    headers: idempotencyHeaders(body.id),
+  })
+  return orderSchema.parse(data.data)
+}
+
 export function useSell() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async (body: SaleBody) => {
-      const { data } = await api.post<{ data: unknown }>("/sales/", body, {
-        headers: idempotencyHeaders(body.id),
-      })
-      return orderSchema.parse(data.data)
-    },
+    mutationFn: sendSale,
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: saleKeys.all })
       void queryClient.invalidateQueries({ queryKey: shiftKeys.all })

@@ -55,6 +55,16 @@ From then on, kitchen tickets, bills and receipts print in the background whatev
 - **Restaurant checkout:** the table's bill (items, options, discount, service, PBJT, total, and what this guest pays now when the bill is split).
 - **Paid:** "Terima kasih", the amount paid and the change, then back to the welcome.
 
+## When the internet goes down
+
+The cashier PC keeps the snack bar selling; the restaurant screens wait for the connection.
+
+- **What keeps working:** the POS opens even after a restart (the app is saved on the PC), still signed in as the last cashier. The snack bar sells from the saved products and prices, for cash or QRIS. The receipt, and any kitchen or bar ticket for menu items, print straight from this PC through the print agent, and the drawer opens for cash.
+- **What waits:** tables, orders, the customer display and waiter tablets need the server. A yellow bar says so.
+- **The top bar** shows **Offline**, then **Mengirim · n** while the saved sales go out. Each one is recorded at the time it was sold, by the cashier who sold it. The snack bar's **Hari ini** list shows any sale the server refused (for example no open shift) with the reason; **Coba lagi** sends it again.
+- **Don't** sign out or close the shift while offline: signing in needs the internet, and the shift can't close until every saved sale has been sent (the close screen blocks it).
+- The PC must have been online with a cashier signed in at least once after each update, so it has the latest app and products saved. It does this by itself during normal use.
+
 ## Windows settings worth doing
 
 - **Sign in automatically** to the daily user, so a restart lands straight in the POS.
