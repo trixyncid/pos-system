@@ -8,7 +8,7 @@ A tablet-first point of sale for a restaurant and its snack bar. It covers order
 | `backend/` | Django 5.2 + DRF + Channels API (Postgres, Redis) |
 | `print-agent/` | Small Windows program on the cashier PC that sends tickets to the LAN/USB printers ([README](print-agent/README.md)) |
 | `scripts/windows/` | Cashier PC setup: kiosk windows, customer display, print agent |
-| `docs/` | [Plan](docs/plan.md), [architecture](docs/architecture.md), [API contract](docs/api-contract.md), [permissions](docs/permissions.md), [printing](docs/printing.md), [design](docs/design.md), [cashier PC setup](docs/cashier-pc-setup.md) |
+| `docs/` | [Plan](docs/plan.md), [architecture](docs/architecture.md), [API contract](docs/api-contract.md), [permissions](docs/permissions.md), [printing](docs/printing.md), [design](docs/design.md), [deployment](docs/deployment.md), [cashier PC setup](docs/cashier-pc-setup.md) |
 
 ## Local development
 
@@ -68,3 +68,7 @@ DEBUG=1 env/bin/uvicorn backend.asgi:application --reload --port 8000
 - Health check: `/health/`.
 - Tests: `DEBUG=1 env/bin/python manage.py test`.
 - Lint: `env/bin/ruff check . && env/bin/ruff format --check .`.
+
+## Production
+
+One Singapore VPS runs the whole POS: Caddy serves the app and the API on one address, with Django, Postgres and Redis behind it. Pushes to `main` are tested, built into two images (`pos-api`, `pos-web`) and deployed by CI. Backups run nightly, with off-site copies. Setup, backups, restores and rollbacks: [docs/deployment.md](docs/deployment.md).

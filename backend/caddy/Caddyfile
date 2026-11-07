@@ -1,5 +1,7 @@
 # Caddy is the only process on ports 80 and 443. It obtains and renews the
-# API certificate itself (stored in the caddy_data volume).
+# certificate itself (stored in the caddy_data volume), serves the React app
+# (built into the web image at /srv/app) and proxies the API to Django, all on
+# one origin: no CORS, and one address for the PWA and the print agent.
 {
 	email {$ACME_EMAIL}
 }
@@ -9,7 +11,11 @@
 	header {
 		Strict-Transport-Security "max-age=31536000; includeSubDomains"
 		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
 		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "camera=(self), microphone=(), geolocation=(), payment=(), usb=(), bluetooth=(self)"
+		# connect-src allows the print agent on the cashier PC (127.0.0.1:9123).
+		Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' wss://{$DOMAIN} http://127.0.0.1:9123 http://localhost:9123; worker-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
 		-Server
 	}
 
@@ -25,8 +31,9 @@
 		file_server
 	}
 
-	# Tablets and the print station keep a socket open all service; reverse_proxy
-	# upgrades WebSockets on its own, and a long read timeout keeps idle ones alive.
+	# Tablets, the cashier PC and the customer display keep a socket open all
+	# service; reverse_proxy upgrades WebSockets on its own, and no read timeout
+	# keeps idle ones alive.
 	handle /ws/* {
 		reverse_proxy api:8000 {
 			transport http {
@@ -35,7 +42,24 @@
 		}
 	}
 
-	handle {
+	@django path /api/* /admin/* /health/
+	handle @django {
 		reverse_proxy api:8000
+	}
+
+	# Vite fingerprints everything in /assets/, so it never changes.
+	handle /assets/* {
+		root * /srv/app
+		header Cache-Control "public, max-age=31536000, immutable"
+		file_server
+	}
+
+	# The app itself. Every other path is a client-side route, so it gets
+	# index.html. Checked on each load, so an update reaches the PC at once.
+	handle {
+		root * /srv/app
+		header Cache-Control "no-cache"
+		try_files {path} /index.html
+		file_server
 	}
 }

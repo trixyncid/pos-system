@@ -1,11 +1,13 @@
 # Architecture
 
 ```
-Tablets (iPad / Android, React SPA) ──HTTPS /api/v1──▶ Caddy ──▶ Django (ASGI: uvicorn workers)
-        ▲                                   │                         │        │
-        └──────────── WSS /ws/outlet/ ──────┘                     Postgres   Redis (cache + channel layer)
-Android Print Station (Capacitor) ── WSS "print" stream ──▶ raw TCP :9100 ──▶ LAN ESC/POS printer
+Cashier PC, tablets (React SPA) ──HTTPS──▶ Caddy (serves the app; /api, /ws, /admin ─▶ Django, ASGI: uvicorn workers)
+        ▲                                   │                                          │        │
+        └──────────── WSS /ws/outlet/ ──────┘                                      Postgres   Redis (cache + channel layer)
+Cashier PC: POS in Chrome ── print agent (127.0.0.1:9123) ──▶ raw TCP :9100 ──▶ LAN ESC/POS printers
 ```
+
+Production runs on one VPS: [deployment.md](deployment.md). Printing: [printing.md](printing.md).
 
 The full plan is in [plan.md](plan.md).
 
@@ -19,7 +21,7 @@ The full plan is in [plan.md](plan.md).
 | `audit/` | Append-only `AuditEvent`, `emit()` with secrets redacted |
 | `realtime/` | WebSocket JWT auth (subprotocol), `OutletConsumer`, `publish()` |
 | `outlet/` | Single `Outlet` row: tax, service charge, rounding |
-| `floor/`, `catalog/`, `orders/`, `payments/`, `shifts/`, `inventory/`, `printing/`, `reports/` | Stubs. Each one's `models.py` docstring lists its planned models |
+| `floor/`, `catalog/`, `orders/`, `payments/`, `shifts/`, `inventory/`, `printing/`, `reports/` | The domain apps: models, services, views and tests for each area |
 
 ## Planned domain model
 

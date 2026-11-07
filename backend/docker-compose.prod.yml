@@ -1,7 +1,9 @@
-# Production API, Postgres, Redis and Caddy for a 2 vCPU / 4 GB VPS.
-# Caddy owns ports 80/443 and the TLS certificate; do not run nginx or certbot on the host.
-# The React app is hosted separately (Vercel). The Android print station connects to the
-# same API over WebSocket, so nothing runs on the restaurant's network except the printer.
+# Production stack for a 2 vCPU / 4 GB VPS: the API, Postgres, Redis, and the web
+# image (Caddy with the built React app). Caddy owns ports 80/443 and the TLS
+# certificate; do not run nginx or certbot on the host. The app and the API share
+# one origin (DOMAIN). The cashier PC pulls print jobs over the WebSocket, so
+# nothing on the restaurant's network needs to be reachable from here.
+# CI builds both images and deploys them (APP_IMAGE, WEB_IMAGE); see docs/deployment.md.
 # Usage: docker compose --env-file .env -f docker-compose.prod.yml up -d
 
 services:
@@ -9,8 +11,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.prod
-    image: ${APP_IMAGE:-pos-backend:latest}
-    container_name: pos-backend
+    image: ${APP_IMAGE:-pos-api:latest}
+    container_name: pos-api
     env_file:
       - .env
     environment:
@@ -69,10 +71,15 @@ services:
     restart: unless-stopped
 
   caddy:
-    image: caddy:2-alpine
+    build:
+      context: ../frontend
+    image: ${WEB_IMAGE:-pos-web:latest}
+    container_name: pos-web
     ports:
       - "80:80"
       - "443:443"
+      # HTTP/3, which Caddy offers browsers on its own.
+      - "443:443/udp"
     environment:
       DOMAIN: ${DOMAIN:?Set DOMAIN in .env}
       ACME_EMAIL: ${ACME_EMAIL:?Set ACME_EMAIL in .env}

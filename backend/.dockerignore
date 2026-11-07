@@ -7,3 +7,5 @@ media/
 staticfiles/
 .env
 .git
+logs/
+backups/
